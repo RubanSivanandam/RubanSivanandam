@@ -60,11 +60,11 @@ learning:  in public — one agentic-AI concept a day on LinkedIn
 <table>
 <tr>
 <td width="50%"><a href="https://github.com/RubanSivanandam/Agentic-Unified-Reasoning-Architecture"><img src="assets/card-aura.svg" width="100%" alt="AURA — Agentic Unified Reasoning Architecture" /></a></td>
-<td width="50%"><img src="assets/card-pyydl.svg" width="100%" alt="pyydl_mcp — production MCP server for factory data" /></td>
+<td width="50%"><a href="https://github.com/RubanSivanandam/NodeJS_JWT"><img src="assets/card-jwt.svg" width="100%" alt="NodeJS_JWT — authentication and role-based access with JWT" /></a></td>
 </tr>
 <tr>
-<td width="50%"><img src="assets/card-po.svg" width="100%" alt="po-ai-extractor — LLM purchase-order extraction" /></td>
-<td width="50%"><img src="assets/card-wms.svg" width="100%" alt="WMS Mobile Suite — Flutter apps for the factory floor" /></td>
+<td width="50%"><a href="https://github.com/RubanSivanandam/NodeJS_CRUD_Backend"><img src="assets/card-crud.svg" width="100%" alt="NodeJS_CRUD_Backend — employee records REST API" /></a></td>
+<td width="50%"><a href="https://github.com/RubanSivanandam/Angular-17-FrontEnd"><img src="assets/card-angular.svg" width="100%" alt="Angular-17-FrontEnd — employee portal UI" /></a></td>
 </tr>
 </table>
 
