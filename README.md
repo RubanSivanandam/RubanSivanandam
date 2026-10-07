@@ -109,7 +109,6 @@ learning:  in public — one agentic-AI concept a day on LinkedIn
 <div align="center">
 <img src="https://github-readme-stats.vercel.app/api?username=RubanSivanandam&show_icons=true&count_private=true&include_all_commits=true&hide_border=true&bg_color=0D1320&title_color=22D3EE&icon_color=8B5CF6&text_color=E6EDF3" height="165" />
 <img src="https://streak-stats.demolab.com?user=RubanSivanandam&hide_border=true&background=0D1320&ring=8B5CF6&fire=22D3EE&currStreakLabel=22D3EE&stroke=1E293B" height="165" />
-<img src="https://github-profile-trophy.vercel.app/?username=RubanSivanandam&theme=tokyonight&no-frame=true&no-bg=true&margin-w=6&column=7" width="100%" />
 </div>
 </details>
 
