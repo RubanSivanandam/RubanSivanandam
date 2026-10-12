@@ -9,10 +9,8 @@
 
 <br>
 
-[![Profile views](https://komarev.com/ghpvc/?username=RubanSivanandam&style=flat-square&color=8B5CF6&label=visitors)](https://github.com/RubanSivanandam)
-[![Followers](https://img.shields.io/github/followers/RubanSivanandam?style=flat-square&logo=github&label=followers&color=22D3EE&labelColor=0D1320)](https://github.com/RubanSivanandam?tab=followers)
-[![AURA stars](https://img.shields.io/github/stars/RubanSivanandam/Agentic-Unified-Reasoning-Architecture?style=flat-square&logo=probot&label=AURA%20stars&color=F472B6&labelColor=0D1320)](https://github.com/RubanSivanandam/Agentic-Unified-Reasoning-Architecture)
 [![Rendered by](https://img.shields.io/badge/profile-self--rendered%20every%206h-34D399?style=flat-square&labelColor=0D1320&logo=githubactions&logoColor=white)](.github/workflows/profile.yml)
+[![AURA](https://img.shields.io/badge/flagship-AURA-8B5CF6?style=flat-square&labelColor=0D1320&logo=probot&logoColor=white)](https://github.com/RubanSivanandam/Agentic-Unified-Reasoning-Architecture)
 
 <img src="assets/boot.svg" width="100%" alt="Boot log: memory, guardrails, agent swarm and MCP servers coming online" />
 
@@ -47,26 +45,30 @@ learning:  in public — one agentic-AI concept a day on LinkedIn
 
 <div align="center"><img src="assets/divider.svg" width="100%" alt="" /></div>
 
-<h3><code>ruban@agent-os ~ $ aura swarm --watch</code></h3>
+<h3><code>ruban@agent-os ~ $ ./prod --private</code></h3>
+
+<div align="center">
+<img src="assets/production.svg" width="100%" alt="Four plant databases (India, Bangladesh, Sri Lanka, Jordan) feed one read-only guardrail, then MCP servers Claude can call, then shop-floor apps. Tiles: production MCP, quality MCP, line telemetry MCP, read-only guardrail, Flutter floor apps, document AI" />
+</div>
+
+<sub>What I run in production at Ambattur Fashion. The repos are private; this describes what each system does and leaves out hosts, schemas and figures.</sub>
+
+<div align="center"><img src="assets/divider.svg" width="100%" alt="" /></div>
+
+<h3><code>ruban@agent-os ~ $ aura --about</code></h3>
+
+**[AURA](https://github.com/RubanSivanandam/Agentic-Unified-Reasoning-Architecture)** lets you ask your company's data questions in plain English and **see exactly how the AI reached every answer**. It runs on a laptop with no GPU, works with any model you bring a key for, and your data stays on your machine.
 
 <div align="center">
 <a href="https://github.com/RubanSivanandam/Agentic-Unified-Reasoning-Architecture">
 <img src="assets/swarm.svg" width="100%" alt="AURA orchestrator routing messages between planner, researcher, coder, critic, memory and guardrail agents" />
 </a>
+<a href="https://github.com/RubanSivanandam/Agentic-Unified-Reasoning-Architecture/blob/main/CHANGELOG.md">
+<img src="assets/shiplog.svg" width="100%" alt="AURA ship log: current version, gated sprints, waves shipped and keyless tests from its README, plus tests per release from its CHANGELOG" />
+</a>
 </div>
 
-<h3><code>ruban@agent-os ~ $ ls ./flagship</code></h3>
-
-<table>
-<tr>
-<td width="50%"><a href="https://github.com/RubanSivanandam/Agentic-Unified-Reasoning-Architecture"><img src="assets/card-aura.svg" width="100%" alt="AURA — Agentic Unified Reasoning Architecture" /></a></td>
-<td width="50%"><a href="https://github.com/RubanSivanandam/NodeJS_JWT"><img src="assets/card-jwt.svg" width="100%" alt="NodeJS_JWT — authentication and role-based access with JWT" /></a></td>
-</tr>
-<tr>
-<td width="50%"><a href="https://github.com/RubanSivanandam/NodeJS_CRUD_Backend"><img src="assets/card-crud.svg" width="100%" alt="NodeJS_CRUD_Backend — employee records REST API" /></a></td>
-<td width="50%"><a href="https://github.com/RubanSivanandam/Angular-17-FrontEnd"><img src="assets/card-angular.svg" width="100%" alt="Angular-17-FrontEnd — employee portal UI" /></a></td>
-</tr>
-</table>
+<sub>Earlier public work (2024): [NodeJS_JWT](https://github.com/RubanSivanandam/NodeJS_JWT) · [NodeJS_CRUD_Backend](https://github.com/RubanSivanandam/NodeJS_CRUD_Backend) · [NodeJS_CRUD_Postgresql_MongoDB](https://github.com/RubanSivanandam/NodeJS_CRUD_Postgresql_MongoDB) · [Angular-17-FrontEnd](https://github.com/RubanSivanandam/Angular-17-FrontEnd)</sub>
 
 <h3><code>ruban@agent-os ~ $ ./pattern --today</code></h3>
 
@@ -82,7 +84,19 @@ learning:  in public — one agentic-AI concept a day on LinkedIn
 <img src="assets/stack.svg" width="100%" alt="Tech stack orbiting Claude: Python, MCP, multi-agent; TypeScript, React, Vite, Flutter, Dart; SQL Server, SQLite, PostgreSQL, MongoDB, Node.js, GitHub Actions, rdflib" />
 </div>
 
-<h3><code>ruban@agent-os ~ $ ./telemetry --live</code></h3>
+<h3><code>ruban@agent-os ~ $ tail -f activity.log</code></h3>
+
+<!--ACTIVITY:START-->
+- `2026-10-07` ⚡ pushed to [RubanSivanandam](https://github.com/RubanSivanandam/RubanSivanandam)
+- `2026-10-07` 🌱 created branch `main` in [RubanSivanandam](https://github.com/RubanSivanandam/RubanSivanandam)
+- `2026-09-28` ⭐ starred [awesome-claude-code](https://github.com/hesreallyhim/awesome-claude-code)
+- `2026-09-28` ⭐ starred [claude-code-best-practice](https://github.com/shanraisshan/claude-code-best-practice)
+- `2026-09-28` ⭐ starred [linkedin-skills](https://github.com/sergebulaev/linkedin-skills)
+<!--ACTIVITY:END-->
+
+<details>
+<summary><b><code>$ ./telemetry --public</code></b> — public GitHub activity (most of my work lives in private repos)</summary>
+<br>
 
 <div align="center">
 <img src="assets/stats.svg" width="100%" alt="Contribution stats: yearly total, current and longest streak, active days, public repos, languages" />
@@ -95,19 +109,6 @@ learning:  in public — one agentic-AI concept a day on LinkedIn
 </picture>
 </div>
 
-<h3><code>ruban@agent-os ~ $ tail -f activity.log</code></h3>
-
-<!--ACTIVITY:START-->
-- `2026-10-07` ⚡ pushed to [RubanSivanandam](https://github.com/RubanSivanandam/RubanSivanandam)
-- `2026-10-07` 🌱 created branch `main` in [RubanSivanandam](https://github.com/RubanSivanandam/RubanSivanandam)
-- `2026-09-28` ⭐ starred [awesome-claude-code](https://github.com/hesreallyhim/awesome-claude-code)
-- `2026-09-28` ⭐ starred [claude-code-best-practice](https://github.com/shanraisshan/claude-code-best-practice)
-- `2026-09-28` ⭐ starred [linkedin-skills](https://github.com/sergebulaev/linkedin-skills)
-<!--ACTIVITY:END-->
-
-<details>
-<summary><b><code>$ ./stats --third-party</code></b> — the classic cards</summary>
-<br>
 <div align="center">
 <img src="https://github-readme-stats.vercel.app/api?username=RubanSivanandam&show_icons=true&count_private=true&include_all_commits=true&hide_border=true&bg_color=0D1320&title_color=22D3EE&icon_color=8B5CF6&text_color=E6EDF3" height="165" />
 <img src="https://streak-stats.demolab.com?user=RubanSivanandam&hide_border=true&background=0D1320&ring=8B5CF6&fire=22D3EE&currStreakLabel=22D3EE&stroke=1E293B" height="165" />

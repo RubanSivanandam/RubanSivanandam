@@ -52,32 +52,15 @@ AGENT_PATTERNS = [  # (name, one-line idea, arXiv id) — rotates daily on conce
     ("GAIA", "Questions simple for humans but hard for agents: browsing, tools and multi-step reasoning together.", "2311.12983"),
 ]
 
-PROJECTS = [  # public repos only — every card links to its repo
-    dict(slug="aura", repo="Agentic-Unified-Reasoning-Architecture", name="AURA",
-         tag="Agentic Unified Reasoning Architecture", accent=VIOLET,
-         bullets=["CPU-only, BYOK, self-hosted multi-agent runtime on Claude",
-                  "Swarm topologies: hierarchical, pipeline, debate, market",
-                  "Zero-Trust: agent identity, memory integrity, egress gates",
-                  "OWL/RDF ontology + SPARQL + SHACL knowledge layer"],
-         chips=["Python", "Claude", "MCP", "rdflib"]),
-    dict(slug="jwt", repo="NodeJS_JWT", name="NodeJS_JWT", tag="Authentication & role-based access", accent=CYAN,
-         bullets=["Express API with sign-up and login routes",
-                  "Passwords hashed with bcrypt before storage",
-                  "JWT issued on login, verified by auth middleware",
-                  "Email and password validation on every request"],
-         chips=["Node.js", "Express", "MongoDB", "JWT"]),
-    dict(slug="crud", repo="NodeJS_CRUD_Backend", name="NodeJS_CRUD_Backend", tag="Employee records REST API", accent=PINK,
-         bullets=["Create / read / update / delete for employee records",
-                  "Mongoose models over MongoDB, PostgreSQL client wired in",
-                  "JWT-protected routes through auth middleware",
-                  "Hardened with helmet, CORS and no-cache headers"],
-         chips=["Node.js", "Express", "MongoDB", "PostgreSQL"]),
-    dict(slug="angular", repo="Angular-17-FrontEnd", name="Angular-17-FrontEnd", tag="Employee portal UI", accent=GREEN,
-         bullets=["Login and registration forms with validation",
-                  "Employee list with an update flow",
-                  "Styled with Tailwind CSS, toasts via ngx-toastr",
-                  "Talks to the Node.js backend through a dev proxy"],
-         chips=["Angular 17", "TypeScript", "Tailwind", "RxJS"]),
+AURA_REPO = "Agentic-Unified-Reasoning-Architecture"  # source is private; its README + CHANGELOG are public
+
+SYSTEMS = [  # private, in production — described by capability only: no hosts, schemas or figures
+    ("PRODUCTION MCP", "Cut → sew → pack → ship, per order", "Claude answers from live plant data", VIOLET, ["Python", "MCP", "SQL Server"]),
+    ("QUALITY MCP", "DHU, defect Pareto, lot audits", "operator scorecards, re-offer rounds", PINK, ["Python", "MCP"]),
+    ("LINE TELEMETRY MCP", "Live line output and efficiency", "downtime, bottlenecks, line balance", CYAN, ["Python", "MCP"]),
+    ("READ-ONLY GUARDRAIL", "Writes rejected at parse time", "one location per query, then UNION", "#F87171", ["parse-time", "allow-list"]),
+    ("FLOOR APPS", "Inspection, material issue, maintenance", "Android handhelds, BLE meters", GREEN, ["Flutter", "Dart", "SQLite"]),
+    ("DOCUMENT AI", "Purchase orders → structured ERP rows", "every field checked against the source", AMBER, ["Python", "LLM", "React"]),
 ]
 
 
@@ -290,28 +273,48 @@ def stack():
     write("stack.svg", svg(w, h, "".join(body), "", DOTS))
 
 
-def project_cards():
-    w, h = 490, 268
-    per = 2 * (w - 2 + h - 2)
-    for p in PROJECTS:
-        col = p["accent"]
-        css = (f".run{{stroke-dasharray:160 {per-160};animation:run 7s linear infinite}}"
-               f"@keyframes run{{to{{stroke-dashoffset:-{per}}}}}")
-        body = [panel(w, h),
-                f'<rect class="run" x="1" y="1" width="{w-2}" height="{h-2}" rx="18" stroke="{col}" stroke-width="2" filter="url(#glow)"/>',
-                f'<polygon points="44,30 58,38 58,54 44,62 30,54 30,38" fill="{col}" fill-opacity=".15" stroke="{col}"/>'
-                f'<circle cx="44" cy="46" r="4" fill="{col}"><animate attributeName="r" values="3;6;3" dur="2s" repeatCount="indefinite"/></circle>',
-                f'<text x="74" y="46" font-size="22" font-weight="800" fill="{TEXT}">{esc(p["name"])}</text>',
-                f'<text x="74" y="66" class="m" font-size="11.5" fill="{col}">{esc(p["tag"])}</text>']
-        for j, b in enumerate(p["bullets"]):
-            body.append(f'<text x="30" y="{104+j*27}" font-size="13.5" fill="{TEXT}"><tspan fill="{col}">▸ </tspan>{esc(b)}</text>')
-        x = 30
-        for c in p["chips"]:
-            cw = len(c) * 7.2 + 20
-            body.append(f'<rect x="{x}" y="{h-50}" width="{cw:.0f}" height="24" rx="12" fill="{col}" fill-opacity=".1" stroke="{col}" stroke-opacity=".45"/>'
-                        f'<text x="{x+10}" y="{h-33.5}" class="m" font-size="11.5" fill="{col}">{esc(c)}</text>')
-            x += cw + 8
-        write(f"card-{p['slug']}.svg", svg(w, h, "".join(body), css, DOTS))
+def production():
+    """Data plane across the four plants, then the private systems that sit on it."""
+    w, h = 1000, 470
+    body = [panel(w, h), chrome("ambattur-fashion · production · private repos")]
+    plants = ["IND", "BAN", "SL", "JOR"]
+    sw, fw = 140, 80  # stage and floor box widths; plants end at x=262, floor starts at w-40-fw
+    stages = [(402, "GUARDRAIL", "#F87171"), (584, "MCP SERVERS", VIOLET), (766, "CLAUDE", "#D97757")]
+    for i, p in enumerate(plants):
+        x = 40 + i * 58
+        body.append(f'<rect x="{x}" y="70" width="48" height="30" rx="8" fill="{PANEL}" stroke="{CYAN}" stroke-opacity=".7"/>'
+                    f'<text x="{x+24}" y="90" text-anchor="middle" class="m" font-size="12" font-weight="600" fill="{CYAN}">{p}</text>')
+    spans = [(262, 262)] + [(x - sw / 2, x + sw / 2) for x, _, _ in stages] + [(w - 40 - fw, w - 40)]
+    for k in range(len(spans) - 1):
+        a, b = spans[k][1] + 6, spans[k + 1][0] - 6
+        d = f"M{a:.0f},85 L{b:.0f},85"
+        body.append(f'<path d="{d}" stroke="{LINE}" stroke-width="2"/>')
+        for j in range(2):
+            body.append(f'<circle r="3" fill="{CYAN}" filter="url(#glow)"><animateMotion dur="2.4s" begin="{j*1.2 + k*.3:.1f}s" '
+                        f'repeatCount="indefinite" path="{d}"/></circle>')
+    for x, label, col in stages:
+        body.append(f'<rect x="{x-sw/2:.0f}" y="68" width="{sw}" height="34" rx="10" fill="{col}" fill-opacity=".12" stroke="{col}"/>'
+                    f'<text x="{x}" y="90" text-anchor="middle" class="m" font-size="12.5" font-weight="700" fill="{col}">{label}</text>')
+    body.append(f'<rect x="{w-40-fw}" y="68" width="{fw}" height="34" rx="10" fill="{GREEN}" fill-opacity=".12" stroke="{GREEN}"/>'
+                f'<text x="{w-40-fw/2:.0f}" y="90" text-anchor="middle" class="m" font-size="12.5" font-weight="700" fill="{GREEN}">FLOOR</text>'
+                f'<text x="{w/2}" y="128" text-anchor="middle" class="m" font-size="11" fill="{MUTED}">'
+                f'four plant databases → one read-only gate → tools Claude can call → answers on the shop floor</text>')
+    gap, top, th = 16, 150, 140
+    tw = (w - 80 - 2 * gap) / 3
+    for i, (title, l1, l2, col, chips) in enumerate(SYSTEMS):
+        x, y = 40 + (i % 3) * (tw + gap), top + (i // 3) * (th + gap)
+        body.append(f'<rect x="{x:.0f}" y="{y}" width="{tw:.0f}" height="{th}" rx="14" fill="{col}" fill-opacity=".05" stroke="{col}" stroke-opacity=".4"/>'
+                    f'<circle cx="{x+22:.0f}" cy="{y+27}" r="4" fill="{col}"><animate attributeName="opacity" values="1;.25;1" dur="{1.6+i*.2:.1f}s" repeatCount="indefinite"/></circle>'
+                    f'<text x="{x+34:.0f}" y="{y+31}" class="m" font-size="12.5" font-weight="700" letter-spacing="1.5" fill="{col}">{esc(title)}</text>'
+                    f'<text x="{x+20:.0f}" y="{y+62}" font-size="14" font-weight="600" fill="{TEXT}">{esc(l1)}</text>'
+                    f'<text x="{x+20:.0f}" y="{y+84}" font-size="13" fill="{MUTED}">{esc(l2)}</text>')
+        cx = x + 20
+        for c in chips:
+            cw = len(c) * 6.8 + 18
+            body.append(f'<rect x="{cx:.0f}" y="{y+th-38}" width="{cw:.0f}" height="22" rx="11" fill="{col}" fill-opacity=".1" stroke="{col}" stroke-opacity=".45"/>'
+                        f'<text x="{cx+9:.0f}" y="{y+th-23}" class="m" font-size="11" fill="{col}">{esc(c)}</text>')
+            cx += cw + 6
+    write("production.svg", svg(w, h, "".join(body), "", DOTS))
 
 
 def concept(today):
@@ -465,6 +468,71 @@ def stats_card(days, total, today):
     write("stats.svg", svg(w, h, "".join(body), css, DOTS))
 
 
+def aura_receipts():
+    """AURA's own published numbers — README badges plus one entry per CHANGELOG release, oldest first.
+    Test counts are taken as written: bold "**N tests" is exact, "~N on" is approximate, else None."""
+    base = f"https://raw.githubusercontent.com/{USER}/{AURA_REPO}/main"
+    readme, log = fetch(f"{base}/README.md"), fetch(f"{base}/CHANGELOG.md")
+    badges = dict(re.findall(r"img\.shields\.io/badge/([a-z_]+)-([^?\"]+?)-[0-9a-fA-F]{6}\?", readme))
+    tiles = [(badges["version"], "current version"), (badges["gated_sprints"], "gated sprints"),
+             (badges["waves_shipped"], "waves shipped"), (re.match(r"\d+", badges["keyless_tests"]).group(), "keyless tests passing")]
+    releases = []
+    for m in re.finditer(r"^## \[([\d.]+)\] — (\d{4}-\d{2}-\d{2})\n(.*?)(?=^## \[|\Z)", log, re.M | re.S):
+        intro = m.group(3).strip().split("\n\n")[0]
+        exact, approx = re.search(r"\*\*([\d,]+) tests", intro), re.search(r"~([\d,]+) on", intro)
+        hit = exact or approx
+        theme = re.search(r"(Waves? [\d–-]+) — (?:\*\*([^*]+)\*\*|([^(]+?) \()", intro)
+        releases.append(dict(v=m.group(1), date=dt.date.fromisoformat(m.group(2)),
+                             tests=int(hit.group(1).replace(",", "")) if hit else None, approx=exact is None and approx is not None,
+                             theme=f"{theme.group(1)} — {theme.group(2) or theme.group(3)}" if theme else None))
+    if len(releases) < 2:
+        raise ValueError("fewer than two releases parsed from CHANGELOG.md")
+    return tiles, releases[::-1]
+
+
+def shiplog(tiles, releases):
+    w, h = 1000, 400
+    css = (".bar{animation:rise 1.4s cubic-bezier(.2,.8,.2,1) both;transform-box:fill-box;transform-origin:50% 100%}"
+           "@keyframes rise{from{transform:scaleY(0)}}")
+    defs = DOTS + (f'<linearGradient id="barG" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="{VIOLET}"/>'
+                   f'<stop offset="1" stop-color="{CYAN}"/></linearGradient>')
+    body = [panel(w, h), f'<text x="40" y="42" class="m" font-size="12" letter-spacing="3" fill="{AMBER}">AURA · SHIP LOG</text>',
+            f'<text x="{w-40}" y="42" text-anchor="end" class="m" font-size="11" fill="{MUTED}">read from AURA&apos;s public README + CHANGELOG every 6h</text>']
+    tw = (w - 80) / len(tiles)
+    for i, ((val, lbl), col) in enumerate(zip(tiles, [VIOLET, CYAN, PINK, GREEN])):
+        x = 40 + i * tw
+        body.append(f'<rect x="{x+4:.0f}" y="60" width="{tw-8:.0f}" height="74" rx="14" fill="{col}" fill-opacity=".06" stroke="{col}" stroke-opacity=".35"/>'
+                    f'<text x="{x+24:.0f}" y="98" font-size="26" font-weight="800" fill="{TEXT}">{esc(val)}</text>'
+                    f'<text x="{x+24:.0f}" y="120" class="m" font-size="11" fill="{col}">{esc(lbl)}</text>')
+    base, top = 330, 190
+    peak = max(r["tests"] or 0 for r in releases) or 1
+    slot = (w - 80) / len(releases)
+    body.append(f'<text x="40" y="168" class="m" font-size="11" fill="{MUTED}">tests per release, as stated in its changelog entry · ~ = approximate · — = not stated</text>'
+                f'<line x1="40" y1="{base}" x2="{w-40}" y2="{base}" stroke="{LINE}"/>')
+    pts, under = [], len(body)  # trend line goes under the bars
+    for i, r in enumerate(releases):
+        cx = 40 + slot * (i + .5)
+        if r["tests"]:
+            bh = (base - top) * r["tests"] / peak
+            pts.append(f"{cx:.1f},{base-bh:.1f}")
+            body.append(f'<rect class="bar" x="{cx-13:.1f}" y="{base-bh:.1f}" width="26" height="{bh:.1f}" rx="4" fill="url(#barG)" '
+                        f'style="animation-delay:{i*.08:.2f}s"/>'
+                        f'<text x="{cx:.1f}" y="{base-bh-8:.1f}" text-anchor="middle" class="m" font-size="11" fill="{TEXT}">'
+                        f'{"~" if r["approx"] else ""}{r["tests"]:,}</text>')
+        else:
+            body.append(f'<rect x="{cx-13:.1f}" y="{base-6}" width="26" height="6" rx="2" stroke="{MUTED}" stroke-dasharray="2 2"/>'
+                        f'<text x="{cx:.1f}" y="{base-14}" text-anchor="middle" class="m" font-size="11" fill="{MUTED}">—</text>')
+        body.append(f'<text x="{cx:.1f}" y="{base+18}" text-anchor="middle" class="m" font-size="11.5" font-weight="600" fill="{CYAN}">v{esc(r["v"])}</text>'
+                    f'<text x="{cx:.1f}" y="{base+33}" text-anchor="middle" class="m" font-size="10" fill="{MUTED}">{r["date"]:%d %b}</text>')
+    if len(pts) > 1:
+        body.insert(under, f'<polyline points="{" ".join(pts)}" stroke="{PINK}" stroke-opacity=".55" stroke-dasharray="3 4"/>')
+    first, last = releases[0], releases[-1]
+    days = (last["date"] - first["date"]).days
+    caption = f"{len(releases)} releases in {days} days · latest v{last['v']}" + (f" · {last['theme']}" if last["theme"] else "")
+    body.append(f'<text x="{w/2}" y="{h-14}" text-anchor="middle" class="m" font-size="11.5" fill="{TEXT}">{esc(caption)}</text>')
+    write("shiplog.svg", svg(w, h, "".join(body), css, defs))
+
+
 def activity():
     events = json.loads(fetch(f"https://api.github.com/users/{USER}/events/public?per_page=40", api=True))
     out = []
@@ -503,10 +571,14 @@ def splice(text, key, content):
 def main():
     now = dt.datetime.now(dt.timezone.utc)
     today = now.date()
-    for f in (hero, boot, swarm, stack, project_cards, divider):
+    for f in (hero, boot, swarm, stack, production, divider):
         f()
     concept(today)
     footer(now)
+    try:
+        shiplog(*aura_receipts())
+    except Exception as e:  # noqa: BLE001 — keep the last good ship log rather than drawing a wrong one
+        print(f"  AURA receipts fetch failed, keeping existing shiplog: {e}")
     try:
         days, total = contributions()
         heatmap(days, total)
