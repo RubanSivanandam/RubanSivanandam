@@ -54,13 +54,25 @@ AGENT_PATTERNS = [  # (name, one-line idea, arXiv id) — rotates daily on conce
 
 AURA_REPO = "Agentic-Unified-Reasoning-Architecture"  # source is private; its README + CHANGELOG are public
 
-SYSTEMS = [  # private, in production — described by capability only: no hosts, schemas or figures
-    ("PRODUCTION MCP", "Cut → sew → pack → ship, per order", "Claude answers from live plant data", VIOLET, ["Python", "MCP", "SQL Server"]),
-    ("QUALITY MCP", "DHU, defect Pareto, lot audits", "operator scorecards, re-offer rounds", PINK, ["Python", "MCP"]),
-    ("LINE TELEMETRY MCP", "Live line output and efficiency", "downtime, bottlenecks, line balance", CYAN, ["Python", "MCP"]),
-    ("READ-ONLY GUARDRAIL", "Writes rejected at parse time", "one location per query, then UNION", "#F87171", ["parse-time", "allow-list"]),
-    ("FLOOR APPS", "Inspection, material issue, maintenance", "Android handhelds, BLE meters", GREEN, ["Flutter", "Dart", "SQLite"]),
-    ("DOCUMENT AI", "Purchase orders → structured ERP rows", "every field checked against the source", AMBER, ["Python", "LLM", "React"]),
+BUILDS = [  # private repos — (name, tagline, accent, what it does, chips)
+    ("CLAUDE CODE HARNESS", "portable · guarded · self-testing", VIOLET,
+     ["One clone restores the same skills, hooks, mods and MCP servers on any machine",
+      "Deny-by-default .gitignore: credentials and transcripts never travel",
+      "Every third-party mod pinned to a reviewed commit SHA",
+      "Daily scout triages new skills, plugins and papers: adopt · trial · skip"],
+     ["Python", "Hooks", "MCP", "CI"]),
+    ("AI TUTOR", "AI-OS · a harness that teaches, not does", CYAN,
+     ["Hint-first mentor; a hook refuses to write the learner's exercises",
+      "FSRS-6 spaced repetition brings weak spots back on schedule",
+      "Reviewer, red-teamer and interviewer agents with no write tools",
+      "Learning-tracker MCP server on a zero-dependency engine"],
+     ["Python", "Claude Code", "MCP", "FSRS"]),
+    ("CREATORS AGENTIC AI", "Showrunner · revenue, not views", PINK,
+     ["An AI organisation for creators: agents with roles, memory and KPIs",
+      "Daily run: trends → competitors → revenue → a decision you approve",
+      "Ideas ranked by expected return, priced on the creator's real RPM",
+      "Self-hosted, runs with zero API keys; approval gates on by default"],
+     ["Python", "Next.js", "Celery", "Docker"]),
 ]
 
 
@@ -112,13 +124,13 @@ def hero():
     pts = "".join(
         f'<circle cx="{x:.0f}" cy="{y:.0f}" r="{rnd.choice([2, 2.5, 3.5])}" fill="{rnd.choice([CYAN, VIOLET, PINK])}" '
         f'class="pulse" style="animation-delay:{rnd.uniform(0, 4):.2f}s"/>' for x, y in nodes)
-    roles = ["multi-agent swarms", "MCP servers for factories", "zero-trust guardrails",
+    roles = ["multi-agent swarms", "Claude Code harnesses", "zero-trust guardrails",
              "self-improving eval loops"]
     role_txt = "".join(
         f'<text x="{60+CH*1.43*11:.0f}" y="232" class="m role" font-size="20" fill="{CYAN}" '
         f'style="animation-delay:{i*3}s">{esc(r)}</text>' for i, r in enumerate(roles))
     chips, x = "", 60
-    for label, col in [("● online", GREEN), ("4 countries · 1 data plane", CYAN),
+    for label, col in [("● online", GREEN), ("AURA · AI Tutor · Showrunner", CYAN),
                        ("Claude · MCP · Python · Flutter", VIOLET), ("UTC+05:30", PINK)]:
         cw = len(label) * 7.3 + 26
         chips += (f'<rect x="{x}" y="282" width="{cw:.0f}" height="30" rx="15" fill="{col}" fill-opacity=".1" stroke="{col}" stroke-opacity=".5"/>'
@@ -161,10 +173,10 @@ def boot():
         ("ok", "mounting memory", "episodic · semantic · OWL/RDF ontology"),
         ("ok", "arming guardrails", "read-only SQL · egress allow-list · sandbox"),
         ("ok", "spawning swarm", "planner · researcher · coder · critic"),
-        ("ok", "connecting MCP servers", "plant data → Claude (read-only)"),
+        ("ok", "connecting MCP servers", "least-privilege tools → Claude"),
         ("ok", "calibrating confidence", "faithfulness gate on every write"),
         ("ok", "loading eval harness", "no-regression · human-approved changes"),
-        ("hot", "data plane", "IND · BAN · SL · JOR — online"),
+        ("hot", "workspaces", "harness · tutor · creators — online"),
     ]
     w, top, step, loop = 1000, 74, 30, 18.0
     h = top + (len(lines) + 1) * step + 20
@@ -273,48 +285,28 @@ def stack():
     write("stack.svg", svg(w, h, "".join(body), "", DOTS))
 
 
-def production():
-    """Data plane across the four plants, then the private systems that sit on it."""
-    w, h = 1000, 470
-    body = [panel(w, h), chrome("ambattur-fashion · production · private repos")]
-    plants = ["IND", "BAN", "SL", "JOR"]
-    sw, fw = 140, 80  # stage and floor box widths; plants end at x=262, floor starts at w-40-fw
-    stages = [(402, "GUARDRAIL", "#F87171"), (584, "MCP SERVERS", VIOLET), (766, "CLAUDE", "#D97757")]
-    for i, p in enumerate(plants):
-        x = 40 + i * 58
-        body.append(f'<rect x="{x}" y="70" width="48" height="30" rx="8" fill="{PANEL}" stroke="{CYAN}" stroke-opacity=".7"/>'
-                    f'<text x="{x+24}" y="90" text-anchor="middle" class="m" font-size="12" font-weight="600" fill="{CYAN}">{p}</text>')
-    spans = [(262, 262)] + [(x - sw / 2, x + sw / 2) for x, _, _ in stages] + [(w - 40 - fw, w - 40)]
-    for k in range(len(spans) - 1):
-        a, b = spans[k][1] + 6, spans[k + 1][0] - 6
-        d = f"M{a:.0f},85 L{b:.0f},85"
-        body.append(f'<path d="{d}" stroke="{LINE}" stroke-width="2"/>')
-        for j in range(2):
-            body.append(f'<circle r="3" fill="{CYAN}" filter="url(#glow)"><animateMotion dur="2.4s" begin="{j*1.2 + k*.3:.1f}s" '
-                        f'repeatCount="indefinite" path="{d}"/></circle>')
-    for x, label, col in stages:
-        body.append(f'<rect x="{x-sw/2:.0f}" y="68" width="{sw}" height="34" rx="10" fill="{col}" fill-opacity=".12" stroke="{col}"/>'
-                    f'<text x="{x}" y="90" text-anchor="middle" class="m" font-size="12.5" font-weight="700" fill="{col}">{label}</text>')
-    body.append(f'<rect x="{w-40-fw}" y="68" width="{fw}" height="34" rx="10" fill="{GREEN}" fill-opacity=".12" stroke="{GREEN}"/>'
-                f'<text x="{w-40-fw/2:.0f}" y="90" text-anchor="middle" class="m" font-size="12.5" font-weight="700" fill="{GREEN}">FLOOR</text>'
-                f'<text x="{w/2}" y="128" text-anchor="middle" class="m" font-size="11" fill="{MUTED}">'
-                f'four plant databases → one read-only gate → tools Claude can call → answers on the shop floor</text>')
-    gap, top, th = 16, 150, 140
-    tw = (w - 80 - 2 * gap) / 3
-    for i, (title, l1, l2, col, chips) in enumerate(SYSTEMS):
-        x, y = 40 + (i % 3) * (tw + gap), top + (i // 3) * (th + gap)
-        body.append(f'<rect x="{x:.0f}" y="{y}" width="{tw:.0f}" height="{th}" rx="14" fill="{col}" fill-opacity=".05" stroke="{col}" stroke-opacity=".4"/>'
-                    f'<circle cx="{x+22:.0f}" cy="{y+27}" r="4" fill="{col}"><animate attributeName="opacity" values="1;.25;1" dur="{1.6+i*.2:.1f}s" repeatCount="indefinite"/></circle>'
-                    f'<text x="{x+34:.0f}" y="{y+31}" class="m" font-size="12.5" font-weight="700" letter-spacing="1.5" fill="{col}">{esc(title)}</text>'
-                    f'<text x="{x+20:.0f}" y="{y+62}" font-size="14" font-weight="600" fill="{TEXT}">{esc(l1)}</text>'
-                    f'<text x="{x+20:.0f}" y="{y+84}" font-size="13" fill="{MUTED}">{esc(l2)}</text>')
-        cx = x + 20
+def builds():
+    """One row per private build: name, tagline and stack on the left, what it does on the right."""
+    w, top, rh, gap = 1000, 64, 136, 14
+    h = top + len(BUILDS) * (rh + gap) + 16
+    css = ".dot{animation:blink2 1.8s ease-in-out infinite}@keyframes blink2{50%{opacity:.25}}"
+    body = [panel(w, h), chrome("ruban@agent-os: ~/builds — private repos")]
+    for i, (name, tag, col, lines, chips) in enumerate(BUILDS):
+        y = top + i * (rh + gap)
+        body.append(f'<rect x="40" y="{y}" width="{w-80}" height="{rh}" rx="14" fill="{col}" fill-opacity=".05" stroke="{col}" stroke-opacity=".4"/>'
+                    f'<circle class="dot" cx="62" cy="{y+30}" r="4.5" fill="{col}" style="animation-delay:{i*.4:.1f}s"/>'
+                    f'<text x="76" y="{y+35}" font-size="17" font-weight="800" letter-spacing=".5" fill="{TEXT}">{esc(name)}</text>'
+                    f'<text x="62" y="{y+60}" class="m" font-size="11.5" fill="{col}">{esc(tag)}</text>'
+                    f'<line x1="372" y1="{y+18}" x2="372" y2="{y+rh-18}" stroke="{col}" stroke-opacity=".25"/>')
+        cx = 62
         for c in chips:
             cw = len(c) * 6.8 + 18
-            body.append(f'<rect x="{cx:.0f}" y="{y+th-38}" width="{cw:.0f}" height="22" rx="11" fill="{col}" fill-opacity=".1" stroke="{col}" stroke-opacity=".45"/>'
-                        f'<text x="{cx+9:.0f}" y="{y+th-23}" class="m" font-size="11" fill="{col}">{esc(c)}</text>')
+            body.append(f'<rect x="{cx:.0f}" y="{y+rh-42}" width="{cw:.0f}" height="22" rx="11" fill="{col}" fill-opacity=".1" stroke="{col}" stroke-opacity=".45"/>'
+                        f'<text x="{cx+9:.0f}" y="{y+rh-27}" class="m" font-size="11" fill="{col}">{esc(c)}</text>')
             cx += cw + 6
-    write("production.svg", svg(w, h, "".join(body), "", DOTS))
+        for j, ln in enumerate(lines):
+            body.append(f'<text x="396" y="{y+34+j*26}" font-size="13.5" fill="{TEXT}"><tspan fill="{col}">▸ </tspan>{esc(ln)}</text>')
+    write("builds.svg", svg(w, h, "".join(body), css, DOTS))
 
 
 def concept(today):
@@ -571,7 +563,7 @@ def splice(text, key, content):
 def main():
     now = dt.datetime.now(dt.timezone.utc)
     today = now.date()
-    for f in (hero, boot, swarm, stack, production, divider):
+    for f in (hero, boot, swarm, stack, builds, divider):
         f()
     concept(today)
     footer(now)

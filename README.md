@@ -22,8 +22,8 @@
 
 ```yaml
 name:      Ruban Sivanandam
-role:      AI Engineer @ Ambattur Fashion — AI for garment manufacturing across 4 countries
-mission:   put real factory data in front of agents, without ever letting them break it
+role:      AI Engineer — agentic systems, Claude Code harnesses, MCP
+mission:   build agents whose work you can check, behind guardrails they can't talk past
 focus:     [agentic AI, multi-agent orchestration, MCP, RAG, LLM evaluation, AI security]
 learning:  in public — one agentic-AI concept a day on LinkedIn
 ```
@@ -45,13 +45,13 @@ learning:  in public — one agentic-AI concept a day on LinkedIn
 
 <div align="center"><img src="assets/divider.svg" width="100%" alt="" /></div>
 
-<h3><code>ruban@agent-os ~ $ ./prod --private</code></h3>
+<h3><code>ruban@agent-os ~ $ ls ~/builds</code></h3>
 
 <div align="center">
-<img src="assets/production.svg" width="100%" alt="Four plant databases (India, Bangladesh, Sri Lanka, Jordan) feed one read-only guardrail, then MCP servers Claude can call, then shop-floor apps. Tiles: production MCP, quality MCP, line telemetry MCP, read-only guardrail, Flutter floor apps, document AI" />
+<img src="assets/builds.svg" width="100%" alt="Three builds: Claude Code Harness (portable, guarded, self-testing Claude Code config), AI Tutor (AI-OS, a harness that teaches rather than does), and Creators Agentic AI (Showrunner, an AI organisation for creators that optimises revenue, not views)" />
 </div>
 
-<sub>What I run in production at Ambattur Fashion. The repos are private; this describes what each system does and leaves out hosts, schemas and figures.</sub>
+<sub>Three systems I build alongside AURA. The repos are private, so this panel describes what each one does.</sub>
 
 <div align="center"><img src="assets/divider.svg" width="100%" alt="" /></div>
 
@@ -87,6 +87,7 @@ learning:  in public — one agentic-AI concept a day on LinkedIn
 <h3><code>ruban@agent-os ~ $ tail -f activity.log</code></h3>
 
 <!--ACTIVITY:START-->
+- `2026-10-12` ⚡ pushed to [RubanSivanandam](https://github.com/RubanSivanandam/RubanSivanandam)
 - `2026-10-07` ⚡ pushed to [RubanSivanandam](https://github.com/RubanSivanandam/RubanSivanandam)
 - `2026-10-07` 🌱 created branch `main` in [RubanSivanandam](https://github.com/RubanSivanandam/RubanSivanandam)
 - `2026-09-28` ⭐ starred [awesome-claude-code](https://github.com/hesreallyhim/awesome-claude-code)
