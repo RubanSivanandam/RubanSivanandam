@@ -1,6 +1,7 @@
 <!--
   Every image under assets/ is drawn by scripts/render.py (stdlib Python, no third-party cards)
-  and re-rendered every 6 hours by .github/workflows/profile.yml from live GitHub data.
+  and re-rendered every 6 hours by .github/workflows/profile.yml from live GitHub data —
+  except assets/ember.svg, drawn from the pet's own art code in the (private) Claude Code harness.
 -->
 
 <div align="center">
@@ -17,6 +18,14 @@
 <img src="assets/divider.svg" width="100%" alt="" />
 
 </div>
+
+<h3><code>ruban@agent-os ~ $ claude --motion</code></h3>
+
+<div align="center">
+<img src="assets/claude.svg" width="100%" alt="Claude Motion: a real Claude Code session replayed. The prompt asks for a permanent fix for a desktop pet that flickers in screen shares; Claude samples the screen and finds the pet missing from 7 of 104 frames, reads the window code, changes how its glass panel is frosted, samples again and finds 0 of 199 frames missing, re-measures contrast, runs 67 passing tests and commits. A todo list ticks off alongside, and a counter flips from 7/104 to 0/199." />
+</div>
+
+<sub>How I work with Claude Code: measure the problem, fix the cause, measure again, and only then commit. Replayed from a real session; every result line is what the run printed.</sub>
 
 <h3><code>ruban@agent-os ~ $ cat about.yaml</code></h3>
 
@@ -52,6 +61,18 @@ learning:  in public — one agentic-AI concept a day on LinkedIn
 </div>
 
 <sub>Three systems I build alongside AURA. The repos are private, so this panel describes what each one does.</sub>
+
+<h3><code>ruban@agent-os ~ $ /pet</code></h3>
+
+<div align="center">
+<img src="assets/ember.svg" width="100%" alt="Ember, an original anime samurai, animated in five palettes: Crimson, Midnight, Sakura, Jade and Shadow" />
+</div>
+
+**Ember** lives in my Claude Code harness: an anime samurai that floats over my desktop and shows,
+live, what Claude is doing. It shows the running tool, the plan's progress, and session, weekly and context use, on a
+liquid-glass panel. When Claude needs me it says so, on screen, in the Windows tray, and on my phone if I turn that on.
+Every mood is a real event (a test passing, a tool failing, usage running out), and it grows from
+Apprentice to Shogun with verified work. Original character, drawn in code; 67 engine tests.
 
 <div align="center"><img src="assets/divider.svg" width="100%" alt="" /></div>
 

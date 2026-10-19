@@ -309,6 +309,139 @@ def builds():
     write("builds.svg", svg(w, h, "".join(body), css, DOTS))
 
 
+CLAY, CLAY_LT = "#D97757", "#F0A58A"  # Claude's warm terracotta, for the Claude Motion panel
+
+# A real Claude Code session, replayed: the fix that stopped my desktop pet flickering in screen
+# shares (19 Oct 2026). Every result line is what the run printed. (kind, text, result, result colour)
+SESSION = [
+    ("prompt", "fix this with a permanent fix: the pet flickers in screen shares"),
+    ("think", "Investigating"),
+    ("tool", "Bash(flicker-sampler.ps1)", "7 of 104 sampled frames: the pet was missing", AMBER),
+    ("tool", "Read(float/ember-float.ps1)", "it hides from capture for a split second, every second", MUTED),
+    ("tool", "Update(float/ember-float.ps1)", "frost from the strips around the panel; never hide", MUTED),
+    ("tool", "Bash(flicker-sampler.ps1 -Seconds 20)", "0 of 199 frames missing", GREEN),
+    ("tool", "Update(README.md)", "contrast measured again: 12.4–18.4 : 1", MUTED),
+    ("tool", "Bash(claude plugin test ember-pet)", "67 pass · 0 fail", GREEN),
+    ("say", "Fixed: 7/104 → 0/199 frames missing, at 2.3–4.4 % of one core."),
+    ("done", "committed 031998f · pushed main"),
+]
+TODOS = ["Reproduce the flicker", "Frost from the panel's edges", "Verify: zero missing frames", "Update docs and renders", "Test, install, ship"]
+
+
+def spark(cx, cy, r, col):
+    """A six-armed spark, the shape the Claude Code spinner draws while it works."""
+    arms = "".join(f'<line x1="{cx}" y1="{cy}" x2="{cx + r*math.cos(math.radians(a)):.1f}" y2="{cy + r*math.sin(math.radians(a)):.1f}" '
+                   f'stroke="{col}" stroke-width="{r*0.34:.1f}" stroke-linecap="round"/>' for a in range(0, 360, 60))
+    return f'<g>{arms}</g>'
+
+
+def claude_motion():
+    """The signature panel: a Claude Code session plays out, tool call by tool call, while its todo list
+    ticks off and the number it was chasing flips. One 26 s loop, CSS and SMIL only (GitHub runs no script)."""
+    w, h, loop = 1000, 548, 26.0
+    top, step, x0 = 116, 23, 40
+    pct = lambda t: f"{t / loop * 100:.2f}"  # noqa: E731
+    css = [".cur{animation:blink 1s steps(1) infinite}@keyframes blink{50%{opacity:0}}",
+           ".spin{animation:spin 1.6s linear infinite;transform-box:fill-box;transform-origin:center}"
+           "@keyframes spin{0%{transform:rotate(0) scale(.8)}50%{transform:rotate(180deg) scale(1.15)}100%{transform:rotate(360deg) scale(.8)}}",
+           ".breathe{animation:breathe 3.2s ease-in-out infinite;transform-box:fill-box;transform-origin:center}"
+           "@keyframes breathe{50%{transform:scale(1.25) rotate(30deg);opacity:.7}}",
+           ".flow{stroke-dasharray:10 8;animation:flow 2.4s linear infinite}@keyframes flow{to{stroke-dashoffset:-36}}"]
+    n = [0]
+
+    def show(t_on, t_off=loop * 0.96):
+        """A class that is hidden until t_on seconds into the loop, then shown until t_off."""
+        n[0] += 1
+        c = f"s{n[0]}"
+        css.append(f".{c}{{opacity:0;animation:{c} {loop}s infinite}}"
+                   f"@keyframes {c}{{0%,{pct(t_on)}%{{opacity:0}}{pct(t_on + .25)}%,{pct(t_off)}%{{opacity:1}}"
+                   f"{pct(t_off + .25)}%,100%{{opacity:0}}}}")
+        return c
+
+    defs = DOTS + (f'<linearGradient id="clay" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="{CLAY}" stop-opacity="0"/>'
+                   f'<stop offset=".5" stop-color="{CLAY}"/><stop offset="1" stop-color="{CLAY_LT}" stop-opacity="0"/></linearGradient>')
+    body = [panel(w, h), chrome("claude · ~/harness/mods/ember-pet — Claude Code"),
+            f'<g class="breathe">{spark(52, 72, 9, CLAY)}</g>',
+            f'<text x="72" y="77" class="m" font-size="12" letter-spacing="3" fill="{CLAY_LT}">CLAUDE MOTION · A REAL SESSION, REPLAYED</text>',
+            f'<text x="{w-40}" y="77" text-anchor="end" class="m" font-size="11" fill="{MUTED}">19 Oct 2026 · every result is what the run printed</text>',
+            f'<line x1="40" y1="92" x2="{w-40}" y2="92" stroke="{LINE}"/>']
+
+    t, row, times = 0.6, 0, []
+    for item in SESSION:
+        kind = item[0]
+        y = top + row * step
+        if kind == "prompt":
+            tw = len(item[1]) * 7.8
+            body.append(f'<clipPath id="typeP"><rect x="{x0+18}" y="{y-14}" height="22" width="0">'
+                        f'<animate attributeName="width" values="0;0;{tw:.0f};{tw:.0f};0" keyTimes="0;.02;.1;.96;1" dur="{loop}s" repeatCount="indefinite"/></rect></clipPath>'
+                        f'<rect x="{x0-8}" y="{y-17}" width="600" height="26" rx="6" fill="{CLAY}" fill-opacity=".07"/>'
+                        f'<text x="{x0}" y="{y}" class="m" font-size="13" font-weight="700" fill="{CLAY}">&gt;</text>'
+                        f'<text x="{x0+18}" y="{y}" class="m" font-size="13" fill="{TEXT}" clip-path="url(#typeP)">{esc(item[1])}</text>')
+            t, row = 3.0, row + 1
+        elif kind == "think":
+            on, off = t, t + 2.6
+            body.append(f'<g class="{show(on, off)}"><g class="spin">{spark(x0+5, y-4.5, 6, CLAY)}</g>'
+                        f'<text x="{x0+18}" y="{y}" class="m" font-size="13" fill="{CLAY_LT}">{esc(item[1])}…'
+                        f'<tspan fill="{MUTED}"> (esc to interrupt)</tspan></text></g>'
+                        f'<g class="{show(off)}">{spark(x0+5, y-4.5, 5, MUTED)}'
+                        f'<text x="{x0+18}" y="{y}" class="m" font-size="13" fill="{MUTED}">Investigated</text></g>')
+            t, row = off, row + 1
+        elif kind == "tool":
+            _, call, result, col = item
+            name, arg = call.split("(", 1)
+            c = show(t)
+            body.append(f'<g class="{c}"><circle cx="{x0+5}" cy="{y-4.5}" r="4" fill="{GREEN}"/>'
+                        f'<text x="{x0+18}" y="{y}" class="m" font-size="13" fill="{TEXT}" font-weight="700">{esc(name)}'
+                        f'<tspan font-weight="400" fill="{MUTED}">({esc(arg)}</tspan></text>'
+                        f'<path d="M{x0+20} {y+6} v8 h8" stroke="{MUTED}" stroke-opacity=".6"/>'
+                        f'<text x="{x0+36}" y="{y+step}" class="m" font-size="12.5" fill="{col}">{esc(result)}</text></g>')
+            times.append(t)
+            t, row = t + 2.5, row + 2
+        elif kind == "say":
+            body.append(f'<g class="{show(t)}"><circle cx="{x0+5}" cy="{y-4.5}" r="4" fill="{TEXT}"/>'
+                        f'<text x="{x0+18}" y="{y}" class="m" font-size="13" fill="{TEXT}">{esc(item[1])}</text></g>')
+            t, row = t + 2.2, row + 1
+        else:
+            body.append(f'<g class="{show(t)}"><text x="{x0}" y="{y}" class="m" font-size="13" fill="{GREEN}">✓ '
+                        f'<tspan fill="{TEXT}">{esc(item[1])}</tspan></text>'
+                        f'<rect class="cur" x="{x0 + (len(item[1]) + 3) * 7.8:.0f}" y="{y-12}" width="8" height="15" fill="{CLAY}"/></g>')
+            times.append(t)
+
+    # the todo list, ticking off as the work it names lands: the first sampler, the fix, the second
+    # sampler, the docs, and the commit
+    rx, ry = 668, 112
+    body.append(f'<rect x="{rx-16}" y="{ry-26}" width="{w-40-rx+16}" height="200" rx="12" fill="{CLAY}" fill-opacity=".05" stroke="{CLAY}" stroke-opacity=".35"/>'
+                f'<text x="{rx}" y="{ry-4}" class="m" font-size="11" letter-spacing="3" fill="{CLAY_LT}">TODOS</text>')
+    for k, (label, t_done) in enumerate(zip(TODOS, [times[0], times[2], times[3], times[4], times[6]])):
+        y = ry + 24 + k * 30
+        done = show(t_done + .6)
+        # pending: the label in full ink; done: a ticked box and the label struck through by the font
+        # itself, so the line always ends where the text does
+        n[0] += 1
+        pend = f"p{n[0]}"
+        css.append(f".{pend}{{animation:{pend} {loop}s infinite}}"
+                   f"@keyframes {pend}{{0%,{pct(t_done + .6)}%{{opacity:1}}{pct(t_done + .85)}%,{pct(loop * .96)}%{{opacity:0}}"
+                   f"{pct(loop * .96 + .25)}%,100%{{opacity:1}}}}")
+        body.append(f'<rect x="{rx}" y="{y-11}" width="13" height="13" rx="3" stroke="{MUTED}"/>'
+                    f'<text class="{pend}" x="{rx+22}" y="{y}" font-size="13" fill="{TEXT}">{esc(label)}</text>'
+                    f'<g class="{done}"><rect x="{rx}" y="{y-11}" width="13" height="13" rx="3" fill="{GREEN}"/>'
+                    f'<path d="M{rx+3} {y-4.5} l3 3 l5 -6" stroke="{PANEL}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+                    f'<text x="{rx+22}" y="{y}" font-size="13" fill="{MUTED}" text-decoration="line-through">{esc(label)}</text></g>')
+
+    # the number the session was chasing: frames where the pet went missing
+    by = ry + 196
+    body.append(f'<rect x="{rx-16}" y="{by}" width="{w-40-rx+16}" height="118" rx="12" fill="{PANEL}" stroke="{LINE}"/>'
+                f'<text x="{rx}" y="{by+26}" class="m" font-size="11" letter-spacing="3" fill="{MUTED}">FRAMES MISSING IN CAPTURE</text>'
+                f'<text x="{rx}" y="{by+78}" font-size="44" font-weight="800" fill="{AMBER}" class="{show(times[0] + .4, times[3] + .6)}">7<tspan font-size="20" fill="{MUTED}"> / 104</tspan></text>'
+                f'<text x="{rx}" y="{by+78}" font-size="44" font-weight="800" fill="{GREEN}" class="{show(times[3] + .6)}">0<tspan font-size="20" fill="{MUTED}"> / 199</tspan></text>'
+                f'<text x="{rx}" y="{by+102}" class="m" font-size="11" fill="{MUTED}">sampled every ~100 ms, like a screen recorder</text>')
+
+    body.append(f'<path class="flow" d="M40 {h-44} H{w-40}" stroke="url(#clay)" stroke-width="2"/>'
+                f'<text x="{w/2}" y="{h-18}" text-anchor="middle" class="m" font-size="11.5" fill="{MUTED}">'
+                f'measure it, fix the cause, measure again · the loop I run Claude Code in, every day</text>')
+    write("claude.svg", svg(w, h, "".join(body), "".join(css), defs))
+
+
 def concept(today):
     name, idea, arxiv = AGENT_PATTERNS[today.toordinal() % len(AGENT_PATTERNS)]
     w, h = 1000, 170
@@ -563,7 +696,7 @@ def splice(text, key, content):
 def main():
     now = dt.datetime.now(dt.timezone.utc)
     today = now.date()
-    for f in (hero, boot, swarm, stack, builds, divider):
+    for f in (hero, boot, claude_motion, swarm, stack, builds, divider):
         f()
     concept(today)
     footer(now)
