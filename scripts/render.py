@@ -5,13 +5,15 @@ Stdlib only. Run by .github/workflows/profile.yml every 6 hours; runs locally to
     python scripts/render.py
 Live data (contribution calendar, repos, public events) is fetched from GitHub. If a
 fetch fails, the SVGs that depend on it are left as they are rather than drawn empty.
+
+The look is monochrome luxe: black and warm white, one gold accent, a didone for display
+type, and motion that eases in once on load and then only breathes.
 """
 import datetime as dt
 import html
 import json
 import math
 import os
-import random
 import re
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -24,13 +26,15 @@ ASSETS = ROOT / "assets"
 README = ROOT / "README.md"
 TOKEN = os.environ.get("GITHUB_TOKEN", "")
 
-# ── design tokens ────────────────────────────────────────────────────────────
-PANEL, LINE, TEXT, MUTED = "#0D1320", "#1E293B", "#E6EDF3", "#8B98A9"
-VIOLET, CYAN, PINK, GREEN, AMBER = "#8B5CF6", "#22D3EE", "#F472B6", "#34D399", "#FBBF24"
-HEAT = ["#161B26", "#2E1065", "#5B21B6", "#8B5CF6", "#22D3EE"]
+# ── design tokens: monochrome luxe ───────────────────────────────────────────
+INK, LINE, RULE = "#0A0A0A", "#1E1E1E", "#2C2C2C"
+TEXT, SOFT, MUTED, DIM = "#F5F3EE", "#C9C5BC", "#8C8A85", "#55524E"
+GOLD, GOLD_DIM = "#C9A24B", "#6B5A33"
+HEAT = ["#171717", "#2E2A22", "#5C4D2A", "#9A7C36", "#C9A24B"]
+SERIF = "'Bodoni Moda','Bodoni 72','Didot','Bodoni MT','Playfair Display',Georgia,serif"
+SANS = "'Archivo','Helvetica Neue',Helvetica,Arial,sans-serif"
 MONO = "'JetBrains Mono','SFMono-Regular',Consolas,Menlo,monospace"
-SANS = "'Segoe UI',Inter,'Helvetica Neue',Arial,sans-serif"
-CH = 8.4  # approx. advance of a 14px monospace glyph
+EASE = "cubic-bezier(.2,.8,.2,1)"
 
 AGENT_PATTERNS = [  # (name, one-line idea, arXiv id) — rotates daily on concept.svg
     ("ReAct", "Interleave reasoning traces with tool actions, so each step can be grounded in what the last one observed.", "2210.03629"),
@@ -54,20 +58,20 @@ AGENT_PATTERNS = [  # (name, one-line idea, arXiv id) — rotates daily on conce
 
 AURA_REPO = "Agentic-Unified-Reasoning-Architecture"  # source is private; its README + CHANGELOG are public
 
-BUILDS = [  # private repos — (name, tagline, accent, what it does, chips)
-    ("CLAUDE CODE HARNESS", "portable · guarded · self-testing", VIOLET,
+BUILDS = [  # private repos — (name, tagline, what it does, chips)
+    ("Claude Code Harness", "portable · guarded · self-testing",
      ["One clone restores the same skills, hooks, mods and MCP servers on any machine",
       "Deny-by-default .gitignore: credentials and transcripts never travel",
       "Every third-party mod pinned to a reviewed commit SHA",
       "Daily scout triages new skills, plugins and papers: adopt · trial · skip"],
      ["Python", "Hooks", "MCP", "CI"]),
-    ("AI TUTOR", "AI-OS · a harness that teaches, not does", CYAN,
+    ("AI Tutor", "AI-OS · a harness that teaches, not does",
      ["Hint-first mentor; a hook refuses to write the learner's exercises",
       "FSRS-6 spaced repetition brings weak spots back on schedule",
       "Reviewer, red-teamer and interviewer agents with no write tools",
       "Learning-tracker MCP server on a zero-dependency engine"],
      ["Python", "Claude Code", "MCP", "FSRS"]),
-    ("CREATORS AGENTIC AI", "Showrunner · revenue, not views", PINK,
+    ("Creators Agentic AI", "Showrunner · revenue, not views",
      ["An AI organisation for creators: agents with roles, memory and KPIs",
       "Daily run: trends → competitors → revenue → a decision you approve",
       "Ideas ranked by expected return, priced on the creator's real RPM",
@@ -81,29 +85,38 @@ def esc(s):
 
 
 def svg(w, h, body, css="", defs=""):
+    """One panel. Shared motion: .rise (lifts in), .fade, .draw (a line drawn left to right),
+    each eased once on load; stagger with style="animation-delay:…"."""
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}" fill="none">'
-        f"<style>text{{font-family:{SANS}}}.m{{font-family:{MONO}}}{css}</style>"
-        f'<defs><linearGradient id="brand" x1="0" y1="0" x2="1" y2="0">'
-        f'<stop offset="0" stop-color="{VIOLET}"/><stop offset=".5" stop-color="{CYAN}"/><stop offset="1" stop-color="{PINK}"/></linearGradient>'
-        f'<filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4" result="b"/>'
-        f'<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>{defs}</defs>'
-        f"{body}</svg>"
+        f"<style>text{{font-family:{SANS}}}.s{{font-family:{SERIF}}}.m{{font-family:{MONO}}}"
+        f".rise{{animation:rise 1.1s {EASE} both}}@keyframes rise{{from{{opacity:0;transform:translateY(16px)}}}}"
+        f".fade{{animation:fade 1.4s {EASE} both}}@keyframes fade{{from{{opacity:0}}}}"
+        f".draw{{animation:draw 1.6s {EASE} both;transform-box:fill-box;transform-origin:0 50%}}@keyframes draw{{from{{transform:scaleX(0)}}}}"
+        f".breathe{{animation:breathe 4s ease-in-out infinite;transform-box:fill-box;transform-origin:center}}"
+        f"@keyframes breathe{{50%{{transform:rotate(45deg) scale(1.35);opacity:.65}}}}{css}</style>"
+        f"<defs>{defs}</defs>{body}</svg>"
     )
 
 
-def panel(w, h, r=18):
-    return (f'<rect x="1" y="1" width="{w-2}" height="{h-2}" rx="{r}" fill="{PANEL}" stroke="{LINE}"/>'
-            f'<rect x="1" y="1" width="{w-2}" height="{h-2}" rx="{r}" fill="url(#dots)" opacity=".5"/>')
+def card(w, h):
+    """Black card, hairline edge, and an inner frame: the luxe border."""
+    return (f'<rect x=".5" y=".5" width="{w-1}" height="{h-1}" rx="6" fill="{INK}" stroke="{LINE}"/>'
+            f'<rect x="14.5" y="14.5" width="{w-29}" height="{h-29}" rx="2" stroke="{RULE}" stroke-opacity=".55"/>')
 
 
-DOTS = f'<pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1" fill="{LINE}"/></pattern>'
+def label(x, y, text, col=MUTED, anchor="start", size=11, cls="fade", delay=0.0):
+    return (f'<text x="{x}" y="{y}" text-anchor="{anchor}" class="m {cls}" font-size="{size}" letter-spacing="3.4" '
+            f'fill="{col}" style="animation-delay:{delay:.2f}s">{esc(text.upper())}</text>')
 
 
-def chrome(title):
-    dots = "".join(f'<circle cx="{26+i*18}" cy="26" r="5.5" fill="{c}"/>'
-                   for i, c in enumerate(["#FF5F57", "#FEBC2E", "#28C840"]))
-    return dots + f'<text x="92" y="30.5" class="m" font-size="12" fill="{MUTED}">{esc(title)}</text>'
+def diamond(cx, cy, s=7, col=GOLD, cls="", delay=0.0):
+    return (f'<rect class="{cls}" x="{cx-s/2:.1f}" y="{cy-s/2:.1f}" width="{s}" height="{s}" fill="{col}" '
+            f'transform="rotate(45 {cx:.1f} {cy:.1f})" style="animation-delay:{delay:.2f}s"/>')
+
+
+def rule(x1, y, x2, col=RULE, delay=0.0, cls="draw"):
+    return f'<line class="{cls}" x1="{x1}" y1="{y}" x2="{x2}" y2="{y}" stroke="{col}" style="animation-delay:{delay:.2f}s"/>'
 
 
 def write(name, content):
@@ -113,370 +126,199 @@ def write(name, content):
     print(f"  wrote assets/{name} ({len(content):,} bytes)")
 
 
-# ── static components ────────────────────────────────────────────────────────
+# ── static panels ────────────────────────────────────────────────────────────
 def hero():
-    w, h = 1000, 360
-    rnd = random.Random(29)
-    nodes = [(rnd.uniform(770, 975), rnd.uniform(60, 330)) for _ in range(26)]
-    edges = "".join(
-        f'<line x1="{a[0]:.0f}" y1="{a[1]:.0f}" x2="{b[0]:.0f}" y2="{b[1]:.0f}" stroke="{VIOLET}" stroke-opacity=".28"/>'
-        for i, a in enumerate(nodes) for b in nodes[i + 1:] if math.dist(a, b) < 95)
-    pts = "".join(
-        f'<circle cx="{x:.0f}" cy="{y:.0f}" r="{rnd.choice([2, 2.5, 3.5])}" fill="{rnd.choice([CYAN, VIOLET, PINK])}" '
-        f'class="pulse" style="animation-delay:{rnd.uniform(0, 4):.2f}s"/>' for x, y in nodes)
-    roles = ["multi-agent swarms", "Claude Code harnesses", "zero-trust guardrails",
-             "self-improving eval loops"]
-    role_txt = "".join(
-        f'<text x="{60+CH*1.43*11:.0f}" y="232" class="m role" font-size="20" fill="{CYAN}" '
-        f'style="animation-delay:{i*3}s">{esc(r)}</text>' for i, r in enumerate(roles))
-    chips, x = "", 60
-    for label, col in [("● online", GREEN), ("AURA · AI Tutor · Showrunner", CYAN),
-                       ("Claude · MCP · Python · Flutter", VIOLET), ("UTC+05:30", PINK)]:
-        cw = len(label) * 7.3 + 26
-        chips += (f'<rect x="{x}" y="282" width="{cw:.0f}" height="30" rx="15" fill="{col}" fill-opacity=".1" stroke="{col}" stroke-opacity=".5"/>'
-                  f'<text x="{x+13}" y="301.5" class="m" font-size="12" fill="{col}">{esc(label)}</text>')
-        x += cw + 10
-    name = "RUBAN SIVANANDAM"
-    css = (
-        ".pulse{animation:pulse 4s ease-in-out infinite;transform-box:fill-box;transform-origin:center}"
-        "@keyframes pulse{0%,100%{opacity:.35;transform:scale(1)}50%{opacity:1;transform:scale(1.8)}}"
-        ".role{opacity:0;animation:role 12s infinite}"
-        "@keyframes role{0%{opacity:0;transform:translateY(10px)}4%,21%{opacity:1;transform:translateY(0)}25%,100%{opacity:0;transform:translateY(-10px)}}"
-        ".g1{animation:g1 5s steps(1) infinite}.g2{animation:g2 5s steps(1) infinite}"
-        "@keyframes g1{0%,90%,100%{opacity:0;transform:none}91%{opacity:.8;transform:translate(-4px,1px)}94%{opacity:.8;transform:translate(3px,-1px)}97%{opacity:0}}"
-        "@keyframes g2{0%,91%,100%{opacity:0;transform:none}92%{opacity:.8;transform:translate(4px,-1px)}95%{opacity:.8;transform:translate(-3px,1px)}98%{opacity:0}}"
-        ".scan{animation:scan 6s linear infinite}@keyframes scan{0%{transform:translateY(0)}100%{transform:translateY(356px)}}"
-        ".cur{animation:blink 1s steps(1) infinite}@keyframes blink{50%{opacity:0}}"
-    )
-    defs = DOTS + (
-        f'<linearGradient id="shift" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="620" y2="0" spreadMethod="repeat">'
-        f'<stop offset="0" stop-color="{VIOLET}"/><stop offset=".33" stop-color="{CYAN}"/><stop offset=".66" stop-color="{PINK}"/><stop offset="1" stop-color="{VIOLET}"/>'
-        f'<animateTransform attributeName="gradientTransform" type="translate" from="0 0" to="620 0" dur="6s" repeatCount="indefinite"/></linearGradient>'
-        f'<linearGradient id="scanG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{CYAN}" stop-opacity="0"/><stop offset="1" stop-color="{CYAN}" stop-opacity=".18"/></linearGradient>'
-        f'<clipPath id="heroClip"><rect x="1" y="1" width="{w-2}" height="{h-2}" rx="18"/></clipPath>')
-    body = (
-        panel(w, h) + chrome("ruban@agent-os: ~/profile — zsh")
-        + f'<g clip-path="url(#heroClip)">{edges}{pts}<rect class="scan" x="0" y="-40" width="{w}" height="40" fill="url(#scanG)"/></g>'
-        + f'<text x="60" y="104" class="m" font-size="13" letter-spacing="4" fill="{MUTED}">AI ENGINEER · AGENTIC SYSTEMS · MCP</text>'
-        + f'<text x="58" y="172" font-size="60" font-weight="800" letter-spacing="1" fill="{CYAN}" class="g1">{name}</text>'
-        + f'<text x="58" y="172" font-size="60" font-weight="800" letter-spacing="1" fill="{PINK}" class="g2">{name}</text>'
-        + f'<text x="58" y="172" font-size="60" font-weight="800" letter-spacing="1" fill="url(#shift)">{name}</text>'
-        + f'<text x="60" y="232" class="m" font-size="20" fill="{MUTED}">$ building</text>' + role_txt
-        + chips
-    )
-    write("hero.svg", svg(w, h, body, css, defs))
+    """The name in a didone, rising out of two masks; a gold hairline draws under it; the role
+    turns over in gold; a monogram ring with the practice written round it turns slowly."""
+    w, h = 1000, 440
+    roles = ["agentic systems", "Claude Code harnesses", "MCP servers", "zero-trust guardrails"]
+    css = (f".mask1{{animation:up 1.3s {EASE} both .15s}}.mask2{{animation:up 1.3s {EASE} both .35s}}"
+           "@keyframes up{from{transform:translateY(130px)}}"
+           ".role{opacity:0;animation:role 16s infinite}"
+           "@keyframes role{0%{opacity:0;transform:translateY(8px)}3%,22%{opacity:1;transform:translateY(0)}25%,100%{opacity:0;transform:translateY(-8px)}}")
+    cx, cy, r = 838, 214, 104
+    ring = f"M{cx},{cy} m-{r+22},0 a{r+22},{r+22} 0 1,1 {2*(r+22)},0 a{r+22},{r+22} 0 1,1 -{2*(r+22)},0"
+    defs = (f'<clipPath id="l1"><rect x="40" y="96" width="740" height="126"/></clipPath>'
+            f'<clipPath id="l2"><rect x="40" y="222" width="740" height="118"/></clipPath>'
+            f'<path id="ringP" d="{ring}"/>')
+    body = [card(w, h),
+            label(56, 62, "AI engineer", MUTED, delay=.2), label(w - 56, 62, "UTC+05:30", MUTED, "end", delay=.3),
+            f'<g clip-path="url(#l1)"><text x="60" y="198" class="s mask1" font-size="112" font-weight="700" fill="{TEXT}">Ruban</text></g>',
+            f'<g clip-path="url(#l2)"><text x="60" y="310" class="s mask2" font-size="112" font-weight="700" fill="{TEXT}">Sivanandam</text></g>',
+            rule(62, 338, 690, GOLD, .9), diamond(690, 338, 9, GOLD, "fade", 2.2),
+            f'<text x="62" y="378" class="m fade" font-size="13" letter-spacing="3" fill="{MUTED}" style="animation-delay:1.2s">BUILDING —</text>']
+    body += [f'<text x="196" y="378" class="m role" font-size="13" letter-spacing="3" fill="{GOLD}" '
+             f'style="animation-delay:{1.4 + i*4:.1f}s">{esc(r_.upper())}</text>' for i, r_ in enumerate(roles)]
+    meta = "AURA · AI TUTOR · SHOWRUNNER     |     CLAUDE · MCP · PYTHON · FLUTTER"
+    body.append(f'<text x="62" y="412" xml:space="preserve" class="m fade" font-size="10.5" letter-spacing="2.4" fill="{DIM}" style="animation-delay:1.6s">{esc(meta)}</text>')
+    # the monogram: a hairline circle, initials, the practice written round it, one gold point orbiting
+    body.append(f'<g class="fade" style="animation-delay:.8s">'
+                f'<circle cx="{cx}" cy="{cy}" r="{r}" stroke="{RULE}"/>'
+                f'<circle cx="{cx}" cy="{cy}" r="{r-10}" stroke="{LINE}"/>'
+                f'<text x="{cx}" y="{cy+22}" text-anchor="middle" class="s" font-size="62" fill="{TEXT}">RS</text>'
+                f'<g><animateTransform attributeName="transform" type="rotate" from="0 {cx} {cy}" to="360 {cx} {cy}" dur="60s" repeatCount="indefinite"/>'
+                f'<text class="m" font-size="10.5" letter-spacing="4.2" fill="{MUTED}"><textPath href="#ringP">'
+                f'AGENTIC SYSTEMS · CLAUDE CODE · MCP · GUARDRAILS · EVALS · </textPath></text></g>'
+                f'<rect x="-3.5" y="-3.5" width="7" height="7" fill="{GOLD}" transform="rotate(45)">'
+                f'<animateMotion dur="14s" repeatCount="indefinite" rotate="0" path="M{cx},{cy - r} a{r},{r} 0 1,1 -0.01,0"/></rect></g>')
+    write("hero.svg", svg(w, h, "".join(body), css, defs))
 
 
-def boot():
-    lines = [
-        ("cmd", "./boot --profile --verbose"),
-        ("ok", "mounting memory", "episodic · semantic · OWL/RDF ontology"),
-        ("ok", "arming guardrails", "read-only SQL · egress allow-list · sandbox"),
-        ("ok", "spawning swarm", "planner · researcher · coder · critic"),
-        ("ok", "connecting MCP servers", "least-privilege tools → Claude"),
-        ("ok", "calibrating confidence", "faithfulness gate on every write"),
-        ("ok", "loading eval harness", "no-regression · human-approved changes"),
-        ("hot", "workspaces", "harness · tutor · creators — online"),
-    ]
-    w, top, step, loop = 1000, 74, 30, 18.0
-    h = top + (len(lines) + 1) * step + 20
-    css, body = [], [panel(w, h), chrome("ruban@agent-os: ~ — boot.log")]
-    prompt = (f'<tspan fill="{GREEN}">ruban@agent-os</tspan><tspan fill="{VIOLET}">:~$ </tspan>')
-    for i, ln in enumerate(lines):
-        y = top + i * step + 14
-        p = (0.4 + i * 0.75) / loop * 100
-        css.append(f".l{i}{{opacity:0;animation:l{i} {loop}s infinite}}"
-                   f"@keyframes l{i}{{0%,{p:.1f}%{{opacity:0}}{p+0.6:.1f}%,96%{{opacity:1}}100%{{opacity:0}}}}")
-        if ln[0] == "cmd":
-            tw = len(ln[1]) * CH
-            body.append(
-                f'<clipPath id="type"><rect x="{40+18*CH}" y="{y-16}" height="24" width="0">'
-                f'<animate attributeName="width" values="0;0;{tw:.0f};{tw:.0f};0" keyTimes="0;.03;.1;.96;1" dur="{loop}s" repeatCount="indefinite"/></rect></clipPath>'
-                f'<text x="40" y="{y}" class="m" font-size="14" fill="{TEXT}">{prompt}</text>'
-                f'<text x="{40+18*CH}" y="{y}" class="m" font-size="14" fill="{TEXT}" clip-path="url(#type)">{esc(ln[1])}</text>')
-            continue
-        tag, col = ("[  OK  ]", GREEN) if ln[0] == "ok" else ("[ LIVE ]", AMBER)
-        dots = "." * max(3, 26 - len(ln[1]))
-        body.append(
-            f'<text x="40" y="{y}" class="m l{i}" font-size="14"><tspan fill="{col}">{tag}</tspan>'
-            f'<tspan fill="{TEXT}"> {esc(ln[1])} </tspan><tspan fill="{MUTED}" fill-opacity=".35">{dots}</tspan>'
-            f'<tspan fill="{CYAN}"> {esc(ln[2])}</tspan></text>')
-    y = top + len(lines) * step + 14
-    p = (0.4 + len(lines) * 0.75) / loop * 100
-    css.append(f".lz{{opacity:0;animation:lz {loop}s infinite}}"
-               f"@keyframes lz{{0%,{p:.1f}%{{opacity:0}}{p+0.6:.1f}%,96%{{opacity:1}}100%{{opacity:0}}}}"
-               ".cur{animation:blink 1s steps(1) infinite}@keyframes blink{50%{opacity:0}}")
-    last = 'echo "welcome — scroll down"'
-    body.append(f'<g class="lz"><text x="40" y="{y}" class="m" font-size="14">{prompt}'
-                f'<tspan fill="{TEXT}">{esc(last)}</tspan></text>'
-                f'<rect class="cur" x="{40+(18+len(last)+0.5)*CH:.0f}" y="{y-13}" width="9" height="17" fill="{CYAN}"/></g>')
-    write("boot.svg", svg(w, h, "".join(body), "".join(css), DOTS))
+def about():
+    w, h = 1000, 300
+    lines = ["Build agents whose work", "you can check, behind", "guardrails they can’t talk past."]
+    body = [card(w, h), label(56, 62, "About", GOLD), rule(120, 58, 300, RULE, .3)]
+    body += [f'<text x="56" y="{126 + i*50}" class="s rise" font-size="36" fill="{TEXT}" style="animation-delay:{.25 + i*.14:.2f}s">{esc(t)}</text>'
+             for i, t in enumerate(lines)]
+    body.append(f'<line x1="640" y1="48" x2="640" y2="{h-48}" stroke="{RULE}" class="fade" style="animation-delay:.4s"/>')
+    facts = [("Role", ["AI Engineer", "agentic systems · Claude Code · MCP"]),
+             ("Focus", ["multi-agent orchestration, RAG,", "LLM evaluation, AI security"]),
+             ("Learning", ["in public: one agentic-AI", "concept a day on LinkedIn"])]
+    for i, (k, vals) in enumerate(facts):
+        y = 70 + i * 74
+        body.append(label(672, y, k, MUTED, delay=.5 + i * .15))
+        body += [f'<text x="672" y="{y + 22 + j*20}" class="rise" font-size="14.5" fill="{TEXT if j == 0 else SOFT}" '
+                 f'style="animation-delay:{.6 + i*.15:.2f}s">{esc(v)}</text>' for j, v in enumerate(vals)]
+    write("about.svg", svg(w, h, "".join(body)))
+
+
+def builds():
+    """One row per private build: a gold number, the name in the didone, its line, its stack;
+    what it does on the right. Rows lift in one after another; their rules draw across."""
+    w, top, rh = 1000, 92, 158
+    h = top + len(BUILDS) * rh + 30
+    body = [card(w, h), label(56, 62, "Selected builds", GOLD), label(w - 56, 62, "private repositories", MUTED, "end")]
+    for i, (name, tag, lines, chips) in enumerate(BUILDS):
+        y, d = top + i * rh, .2 + i * .22
+        body.append(f'<g class="rise" style="animation-delay:{d:.2f}s">'
+                    f'<text x="56" y="{y+34}" class="m" font-size="12" letter-spacing="2" fill="{GOLD}">{i+1:02d}</text>'
+                    f'<text x="96" y="{y+40}" class="s" font-size="30" fill="{TEXT}">{esc(name)}</text>'
+                    f'<text x="96" y="{y+66}" class="m" font-size="10.5" letter-spacing="2.4" fill="{MUTED}">{esc(tag.upper())}</text>'
+                    f'<text x="96" y="{y+118}" class="m" font-size="10.5" letter-spacing="2.4" fill="{DIM}">{esc("  /  ".join(c.upper() for c in chips))}</text>')
+        for j, ln in enumerate(lines):
+            body.append(f'<rect x="452" y="{y+22+j*28}" width="5" height="5" fill="{GOLD_DIM}" transform="rotate(45 454.5 {y+24.5+j*28})"/>'
+                        f'<text x="470" y="{y+30+j*28}" font-size="12.8" fill="{SOFT}">{esc(ln)}</text>')
+        body.append("</g>")
+        body.append(rule(56, y + rh - 8, w - 56, RULE, d + .3))
+    write("builds.svg", svg(w, h, "".join(body)))
 
 
 def swarm():
-    w, h, cx, cy, r = 1000, 450, 500, 236, 150
-    agents = [("PLANNER", VIOLET), ("RESEARCHER", CYAN), ("CODER", PINK),
-              ("CRITIC", AMBER), ("MEMORY", GREEN), ("GUARDRAIL", "#F87171")]
-    pos = [(cx + r * math.cos(math.radians(-90 + i * 60)), cy + r * math.sin(math.radians(-90 + i * 60)))
-           for i in range(len(agents))]
-    body = [panel(w, h), chrome("aura · swarm-executor · live")]
-    body.append(f'<g opacity=".55"><circle cx="{cx}" cy="{cy}" r="{r}" stroke="{VIOLET}" stroke-dasharray="3 9">'
-                f'<animateTransform attributeName="transform" type="rotate" from="0 {cx} {cy}" to="360 {cx} {cy}" dur="40s" repeatCount="indefinite"/></circle>'
-                f'<circle cx="{cx}" cy="{cy}" r="{r+48}" stroke="{CYAN}" stroke-opacity=".4" stroke-dasharray="1 14">'
-                f'<animateTransform attributeName="transform" type="rotate" from="360 {cx} {cy}" to="0 {cx} {cy}" dur="60s" repeatCount="indefinite"/></circle></g>')
-    for i, ((x, y), (name, col)) in enumerate(zip(pos, agents)):
+    w, h, cx, cy, r = 1000, 460, 500, 244, 150
+    agents = ["PLANNER", "RESEARCHER", "CODER", "CRITIC", "MEMORY", "GUARDRAIL"]
+    pos = [(cx + r * math.cos(math.radians(-90 + i * 60)), cy + r * math.sin(math.radians(-90 + i * 60))) for i in range(6)]
+    body = [card(w, h), label(56, 62, "AURA · the swarm", GOLD), label(w - 56, 62, "live", MUTED, "end")]
+    body.append(f'<g class="fade" style="animation-delay:.2s"><circle cx="{cx}" cy="{cy}" r="{r}" stroke="{RULE}" stroke-dasharray="2 8">'
+                f'<animateTransform attributeName="transform" type="rotate" from="0 {cx} {cy}" to="360 {cx} {cy}" dur="90s" repeatCount="indefinite"/></circle>'
+                f'<circle cx="{cx}" cy="{cy}" r="{r+44}" stroke="{LINE}"/></g>')
+    for i, ((x, y), name) in enumerate(zip(pos, agents)):
         d = f"M{cx},{cy} L{x:.1f},{y:.1f}"
-        body.append(f'<path d="{d}" stroke="{col}" stroke-opacity=".35"/>')
-        for k, (kp, dur) in enumerate([("0;1", 2.2 + i * .35), ("1;0", 3.1 + i * .25)]):
-            body.append(f'<circle r="{3.5 if k == 0 else 2.5}" fill="{col}" filter="url(#glow)">'
-                        f'<animateMotion dur="{dur:.2f}s" repeatCount="indefinite" path="{d}" keyPoints="{kp}" keyTimes="0;1" calcMode="linear"/></circle>')
-    for (x, y), (name, col) in zip(pos, agents):
-        bw = len(name) * 8.6 + 34
-        body.append(f'<rect x="{x-bw/2:.1f}" y="{y-17:.1f}" width="{bw:.1f}" height="34" rx="10" fill="{PANEL}" stroke="{col}"/>'
-                    f'<circle cx="{x-bw/2+14:.1f}" cy="{y:.1f}" r="3.5" fill="{col}"><animate attributeName="opacity" values="1;.2;1" dur="1.6s" repeatCount="indefinite"/></circle>'
-                    f'<text x="{x-bw/2+24:.1f}" y="{y+4.5:.1f}" class="m" font-size="13" font-weight="600" fill="{TEXT}">{name}</text>')
-    body.append(f'<circle cx="{cx}" cy="{cy}" r="46" fill="{VIOLET}" fill-opacity=".15" stroke="{VIOLET}">'
-                f'<animate attributeName="r" values="46;64;46" dur="3s" repeatCount="indefinite"/>'
-                f'<animate attributeName="stroke-opacity" values=".9;0;.9" dur="3s" repeatCount="indefinite"/></circle>'
-                f'<circle cx="{cx}" cy="{cy}" r="46" fill="{PANEL}" stroke="url(#brand)" stroke-width="2" filter="url(#glow)"/>'
-                f'<text x="{cx}" y="{cy+2}" text-anchor="middle" font-size="22" font-weight="800" fill="url(#brand)">AURA</text>'
-                f'<text x="{cx}" y="{cy+19}" text-anchor="middle" class="m" font-size="9" fill="{MUTED}">orchestrator</text>')
+        body.append(f'<path d="{d}" stroke="{RULE}" class="fade" style="animation-delay:{.3 + i*.08:.2f}s"/>')
+        for k, (kp, dur) in enumerate([("0;1", 3.2 + i * .4), ("1;0", 4.4 + i * .3)]):
+            body.append(f'<rect x="-2" y="-2" width="4" height="4" fill="{GOLD if k == 0 else SOFT}" transform="rotate(45)">'
+                        f'<animateMotion dur="{dur:.2f}s" repeatCount="indefinite" path="{d}" keyPoints="{kp}" keyTimes="0;1" calcMode="linear"/></rect>')
+    for i, ((x, y), name) in enumerate(zip(pos, agents)):
+        bw = len(name) * 9.4 + 36
+        body.append(f'<g class="rise" style="animation-delay:{.4 + i*.1:.2f}s">'
+                    f'<rect x="{x-bw/2:.1f}" y="{y-16:.1f}" width="{bw:.1f}" height="32" fill="{INK}" stroke="{RULE}"/>'
+                    f'<rect x="{x-bw/2+12:.1f}" y="{y-2.5:.1f}" width="5" height="5" fill="{GOLD}" transform="rotate(45 {x-bw/2+14.5:.1f} {y:.1f})"/>'
+                    f'<text x="{x-bw/2+26:.1f}" y="{y+4.5:.1f}" class="m" font-size="12" letter-spacing="2" fill="{TEXT}">{name}</text></g>')
+    body.append(f'<circle cx="{cx}" cy="{cy}" r="54" fill="{INK}" stroke="{GOLD}" stroke-opacity=".8"/>'
+                f'<circle cx="{cx}" cy="{cy}" r="54" stroke="{GOLD}" stroke-opacity=".5">'
+                f'<animate attributeName="r" values="54;72;54" dur="4s" repeatCount="indefinite"/>'
+                f'<animate attributeName="stroke-opacity" values=".5;0;.5" dur="4s" repeatCount="indefinite"/></circle>'
+                f'<text x="{cx}" y="{cy+6}" text-anchor="middle" class="s" font-size="26" fill="{TEXT}">AURA</text>'
+                f'<text x="{cx}" y="{cy+24}" text-anchor="middle" class="m" font-size="8.5" letter-spacing="2" fill="{MUTED}">ORCHESTRATOR</text>')
 
-    def column(x, title, items, col):
-        out = f'<text x="{x}" y="96" class="m" font-size="12" letter-spacing="3" fill="{col}">{title}</text>'
+    def column(x, title, items, anchor):
+        out = label(x, 120, title, MUTED, anchor)
         for j, it in enumerate(items):
-            out += (f'<text x="{x}" y="{128+j*30}" class="m" font-size="13" fill="{TEXT}">'
-                    f'<tspan fill="{col}">▸ </tspan>{esc(it)}</text>')
+            out += (f'<text x="{x}" y="{152 + j*30}" text-anchor="{anchor}" class="rise" font-size="14" fill="{SOFT}" '
+                     f'style="animation-delay:{.5 + j*.08:.2f}s">{esc(it)}</text>')
         return out
-    body.append(column(40, "TOPOLOGIES", ["hierarchical", "pipeline", "debate", "market", "+ swarm skills"], CYAN))
-    body.append(column(745, "GUARANTEES", ["fail-closed tool scope", "eval-gated self-edits", "human approval on writes",
-                                           "tamper → quarantine", "blast-radius replay"], PINK))
-    body.append(f'<text x="{cx}" y="{h-22}" text-anchor="middle" class="m" font-size="11" fill="{MUTED}">'
-                f'packets = messages between agents · every arrow is a tool call that passed a guardrail</text>')
-    write("swarm.svg", svg(w, h, "".join(body), "", DOTS))
+    body.append(column(56, "Topologies", ["hierarchical", "pipeline", "debate", "market", "swarm skills"], "start"))
+    body.append(column(w - 56, "Guarantees", ["fail-closed tool scope", "eval-gated self-edits", "human approval on writes",
+                                               "tamper → quarantine", "blast-radius replay"], "end"))
+    body.append(f'<text x="{cx}" y="{h-30}" text-anchor="middle" class="m fade" font-size="10.5" letter-spacing="1.6" fill="{DIM}" style="animation-delay:1s">'
+                f'EVERY PACKET IS A MESSAGE BETWEEN AGENTS · EVERY LINE A TOOL CALL THAT PASSED A GUARDRAIL</text>')
+    write("swarm.svg", svg(w, h, "".join(body)))
 
 
 def stack():
-    w, h, cx, cy = 1000, 540, 500, 280
-    orbits = [(95, 34, ["Python", "MCP", "Multi-Agent"], VIOLET),
-              (168, -52, ["TypeScript", "React", "Vite", "Flutter", "Dart"], CYAN),
-              (240, 70, ["SQL Server", "SQLite", "PostgreSQL", "MongoDB", "Node.js", "GitHub Actions", "rdflib"], PINK)]
-    body = [panel(w, h), chrome("stack.orbit() — gravity: Claude")]
+    w, h, cx, cy = 1000, 540, 500, 278
+    orbits = [(96, 40, ["Python", "MCP", "Multi-Agent"], GOLD_DIM),
+              (170, -60, ["TypeScript", "React", "Vite", "Flutter", "Dart"], RULE),
+              (242, 80, ["SQL Server", "SQLite", "PostgreSQL", "MongoDB", "Node.js", "GitHub Actions", "rdflib"], RULE)]
+    body = [card(w, h), label(56, 62, "Stack", GOLD), label(w - 56, 62, "gravity: Claude", MUTED, "end")]
     for r, dur, items, col in orbits:
-        body.append(f'<circle cx="{cx}" cy="{cy}" r="{r}" stroke="{col}" stroke-opacity=".25" stroke-dasharray="2 6"/>')
+        body.append(f'<circle cx="{cx}" cy="{cy}" r="{r}" stroke="{LINE}"/>')
         frm, to = (0, 360) if dur > 0 else (360, 0)
-        g = (f'<g><animateTransform attributeName="transform" type="rotate" from="{frm} {cx} {cy}" '
+        g = (f'<g class="fade"><animateTransform attributeName="transform" type="rotate" from="{frm} {cx} {cy}" '
              f'to="{to} {cx} {cy}" dur="{abs(dur)}s" repeatCount="indefinite"/>')
         for k, it in enumerate(items):
             a = 2 * math.pi * k / len(items)
             x, y = cx + r * math.cos(a), cy + r * math.sin(a)
-            cw = len(it) * 7.6 + 24
+            cw = len(it) * 7.4 + 26
             g += (f'<g transform="translate({x:.1f} {y:.1f})"><g>'
                   f'<animateTransform attributeName="transform" type="rotate" from="{-frm}" to="{-to}" dur="{abs(dur)}s" repeatCount="indefinite"/>'
-                  f'<rect x="{-cw/2:.1f}" y="-14" width="{cw:.1f}" height="28" rx="14" fill="{PANEL}" stroke="{col}"/>'
-                  f'<text x="0" y="4.5" text-anchor="middle" class="m" font-size="12.5" fill="{TEXT}">{esc(it)}</text></g></g>')
+                  f'<rect x="{-cw/2:.1f}" y="-14" width="{cw:.1f}" height="28" fill="{INK}" stroke="{col}"/>'
+                  f'<text x="0" y="4.5" text-anchor="middle" class="m" font-size="11.5" fill="{TEXT}">{esc(it)}</text></g></g>')
         body.append(g + "</g>")
-    body.append(f'<circle cx="{cx}" cy="{cy}" r="40" fill="#D97757" fill-opacity=".18" stroke="#D97757" filter="url(#glow)">'
-                f'<animate attributeName="r" values="38;44;38" dur="4s" repeatCount="indefinite"/></circle>'
-                f'<text x="{cx}" y="{cy+6}" text-anchor="middle" font-size="17" font-weight="800" fill="#F0A58A">Claude</text>')
-    for i, (lbl, col) in enumerate([("inner · AI core", VIOLET), ("middle · apps & UI", CYAN), ("outer · data & infra", PINK)]):
-        body.append(f'<circle cx="44" cy="{h-80+i*24}" r="5" fill="{col}"/>'
-                    f'<text x="58" y="{h-75.5+i*24}" class="m" font-size="12" fill="{MUTED}">{esc(lbl)}</text>')
-    write("stack.svg", svg(w, h, "".join(body), "", DOTS))
-
-
-def builds():
-    """One row per private build: name, tagline and stack on the left, what it does on the right."""
-    w, top, rh, gap = 1000, 64, 136, 14
-    h = top + len(BUILDS) * (rh + gap) + 16
-    css = ".dot{animation:blink2 1.8s ease-in-out infinite}@keyframes blink2{50%{opacity:.25}}"
-    body = [panel(w, h), chrome("ruban@agent-os: ~/builds — private repos")]
-    for i, (name, tag, col, lines, chips) in enumerate(BUILDS):
-        y = top + i * (rh + gap)
-        body.append(f'<rect x="40" y="{y}" width="{w-80}" height="{rh}" rx="14" fill="{col}" fill-opacity=".05" stroke="{col}" stroke-opacity=".4"/>'
-                    f'<circle class="dot" cx="62" cy="{y+30}" r="4.5" fill="{col}" style="animation-delay:{i*.4:.1f}s"/>'
-                    f'<text x="76" y="{y+35}" font-size="17" font-weight="800" letter-spacing=".5" fill="{TEXT}">{esc(name)}</text>'
-                    f'<text x="62" y="{y+60}" class="m" font-size="11.5" fill="{col}">{esc(tag)}</text>'
-                    f'<line x1="372" y1="{y+18}" x2="372" y2="{y+rh-18}" stroke="{col}" stroke-opacity=".25"/>')
-        cx = 62
-        for c in chips:
-            cw = len(c) * 6.8 + 18
-            body.append(f'<rect x="{cx:.0f}" y="{y+rh-42}" width="{cw:.0f}" height="22" rx="11" fill="{col}" fill-opacity=".1" stroke="{col}" stroke-opacity=".45"/>'
-                        f'<text x="{cx+9:.0f}" y="{y+rh-27}" class="m" font-size="11" fill="{col}">{esc(c)}</text>')
-            cx += cw + 6
-        for j, ln in enumerate(lines):
-            body.append(f'<text x="396" y="{y+34+j*26}" font-size="13.5" fill="{TEXT}"><tspan fill="{col}">▸ </tspan>{esc(ln)}</text>')
-    write("builds.svg", svg(w, h, "".join(body), css, DOTS))
-
-
-CLAY, CLAY_LT = "#D97757", "#F0A58A"  # Claude's warm terracotta, for the Claude Motion panel
-
-# A real Claude Code session, replayed: the fix that stopped my desktop pet flickering in screen
-# shares (19 Oct 2026). Every result line is what the run printed. (kind, text, result, result colour)
-SESSION = [
-    ("prompt", "fix this with a permanent fix: the pet flickers in screen shares"),
-    ("think", "Investigating"),
-    ("tool", "Bash(flicker-sampler.ps1)", "7 of 104 sampled frames: the pet was missing", AMBER),
-    ("tool", "Read(float/ember-float.ps1)", "it hides from capture for a split second, every second", MUTED),
-    ("tool", "Update(float/ember-float.ps1)", "frost from the strips around the panel; never hide", MUTED),
-    ("tool", "Bash(flicker-sampler.ps1 -Seconds 20)", "0 of 199 frames missing", GREEN),
-    ("tool", "Update(README.md)", "contrast measured again: 12.4–18.4 : 1", MUTED),
-    ("tool", "Bash(claude plugin test ember-pet)", "67 pass · 0 fail", GREEN),
-    ("say", "Fixed: 7/104 → 0/199 frames missing, at 2.3–4.4 % of one core."),
-    ("done", "committed 031998f · pushed main"),
-]
-TODOS = ["Reproduce the flicker", "Frost from the panel's edges", "Verify: zero missing frames", "Update docs and renders", "Test, install, ship"]
-
-
-def spark(cx, cy, r, col):
-    """A six-armed spark, the shape the Claude Code spinner draws while it works."""
-    arms = "".join(f'<line x1="{cx}" y1="{cy}" x2="{cx + r*math.cos(math.radians(a)):.1f}" y2="{cy + r*math.sin(math.radians(a)):.1f}" '
-                   f'stroke="{col}" stroke-width="{r*0.34:.1f}" stroke-linecap="round"/>' for a in range(0, 360, 60))
-    return f'<g>{arms}</g>'
-
-
-def claude_motion():
-    """The signature panel: a Claude Code session plays out, tool call by tool call, while its todo list
-    ticks off and the number it was chasing flips. One 26 s loop, CSS and SMIL only (GitHub runs no script)."""
-    w, h, loop = 1000, 548, 26.0
-    top, step, x0 = 116, 23, 40
-    pct = lambda t: f"{t / loop * 100:.2f}"  # noqa: E731
-    css = [".cur{animation:blink 1s steps(1) infinite}@keyframes blink{50%{opacity:0}}",
-           ".spin{animation:spin 1.6s linear infinite;transform-box:fill-box;transform-origin:center}"
-           "@keyframes spin{0%{transform:rotate(0) scale(.8)}50%{transform:rotate(180deg) scale(1.15)}100%{transform:rotate(360deg) scale(.8)}}",
-           ".breathe{animation:breathe 3.2s ease-in-out infinite;transform-box:fill-box;transform-origin:center}"
-           "@keyframes breathe{50%{transform:scale(1.25) rotate(30deg);opacity:.7}}",
-           ".flow{stroke-dasharray:10 8;animation:flow 2.4s linear infinite}@keyframes flow{to{stroke-dashoffset:-36}}"]
-    n = [0]
-
-    def show(t_on, t_off=loop * 0.96):
-        """A class that is hidden until t_on seconds into the loop, then shown until t_off."""
-        n[0] += 1
-        c = f"s{n[0]}"
-        css.append(f".{c}{{opacity:0;animation:{c} {loop}s infinite}}"
-                   f"@keyframes {c}{{0%,{pct(t_on)}%{{opacity:0}}{pct(t_on + .25)}%,{pct(t_off)}%{{opacity:1}}"
-                   f"{pct(t_off + .25)}%,100%{{opacity:0}}}}")
-        return c
-
-    defs = DOTS + (f'<linearGradient id="clay" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="{CLAY}" stop-opacity="0"/>'
-                   f'<stop offset=".5" stop-color="{CLAY}"/><stop offset="1" stop-color="{CLAY_LT}" stop-opacity="0"/></linearGradient>')
-    body = [panel(w, h), chrome("claude · ~/harness/mods/ember-pet — Claude Code"),
-            f'<g class="breathe">{spark(52, 72, 9, CLAY)}</g>',
-            f'<text x="72" y="77" class="m" font-size="12" letter-spacing="3" fill="{CLAY_LT}">CLAUDE MOTION · A REAL SESSION, REPLAYED</text>',
-            f'<text x="{w-40}" y="77" text-anchor="end" class="m" font-size="11" fill="{MUTED}">19 Oct 2026 · every result is what the run printed</text>',
-            f'<line x1="40" y1="92" x2="{w-40}" y2="92" stroke="{LINE}"/>']
-
-    t, row, times = 0.6, 0, []
-    for item in SESSION:
-        kind = item[0]
-        y = top + row * step
-        if kind == "prompt":
-            tw = len(item[1]) * 7.8
-            body.append(f'<clipPath id="typeP"><rect x="{x0+18}" y="{y-14}" height="22" width="0">'
-                        f'<animate attributeName="width" values="0;0;{tw:.0f};{tw:.0f};0" keyTimes="0;.02;.1;.96;1" dur="{loop}s" repeatCount="indefinite"/></rect></clipPath>'
-                        f'<rect x="{x0-8}" y="{y-17}" width="600" height="26" rx="6" fill="{CLAY}" fill-opacity=".07"/>'
-                        f'<text x="{x0}" y="{y}" class="m" font-size="13" font-weight="700" fill="{CLAY}">&gt;</text>'
-                        f'<text x="{x0+18}" y="{y}" class="m" font-size="13" fill="{TEXT}" clip-path="url(#typeP)">{esc(item[1])}</text>')
-            t, row = 3.0, row + 1
-        elif kind == "think":
-            on, off = t, t + 2.6
-            body.append(f'<g class="{show(on, off)}"><g class="spin">{spark(x0+5, y-4.5, 6, CLAY)}</g>'
-                        f'<text x="{x0+18}" y="{y}" class="m" font-size="13" fill="{CLAY_LT}">{esc(item[1])}…'
-                        f'<tspan fill="{MUTED}"> (esc to interrupt)</tspan></text></g>'
-                        f'<g class="{show(off)}">{spark(x0+5, y-4.5, 5, MUTED)}'
-                        f'<text x="{x0+18}" y="{y}" class="m" font-size="13" fill="{MUTED}">Investigated</text></g>')
-            t, row = off, row + 1
-        elif kind == "tool":
-            _, call, result, col = item
-            name, arg = call.split("(", 1)
-            c = show(t)
-            body.append(f'<g class="{c}"><circle cx="{x0+5}" cy="{y-4.5}" r="4" fill="{GREEN}"/>'
-                        f'<text x="{x0+18}" y="{y}" class="m" font-size="13" fill="{TEXT}" font-weight="700">{esc(name)}'
-                        f'<tspan font-weight="400" fill="{MUTED}">({esc(arg)}</tspan></text>'
-                        f'<path d="M{x0+20} {y+6} v8 h8" stroke="{MUTED}" stroke-opacity=".6"/>'
-                        f'<text x="{x0+36}" y="{y+step}" class="m" font-size="12.5" fill="{col}">{esc(result)}</text></g>')
-            times.append(t)
-            t, row = t + 2.5, row + 2
-        elif kind == "say":
-            body.append(f'<g class="{show(t)}"><circle cx="{x0+5}" cy="{y-4.5}" r="4" fill="{TEXT}"/>'
-                        f'<text x="{x0+18}" y="{y}" class="m" font-size="13" fill="{TEXT}">{esc(item[1])}</text></g>')
-            t, row = t + 2.2, row + 1
-        else:
-            body.append(f'<g class="{show(t)}"><text x="{x0}" y="{y}" class="m" font-size="13" fill="{GREEN}">✓ '
-                        f'<tspan fill="{TEXT}">{esc(item[1])}</tspan></text>'
-                        f'<rect class="cur" x="{x0 + (len(item[1]) + 3) * 7.8:.0f}" y="{y-12}" width="8" height="15" fill="{CLAY}"/></g>')
-            times.append(t)
-
-    # the todo list, ticking off as the work it names lands: the first sampler, the fix, the second
-    # sampler, the docs, and the commit
-    rx, ry = 668, 112
-    body.append(f'<rect x="{rx-16}" y="{ry-26}" width="{w-40-rx+16}" height="200" rx="12" fill="{CLAY}" fill-opacity=".05" stroke="{CLAY}" stroke-opacity=".35"/>'
-                f'<text x="{rx}" y="{ry-4}" class="m" font-size="11" letter-spacing="3" fill="{CLAY_LT}">TODOS</text>')
-    for k, (label, t_done) in enumerate(zip(TODOS, [times[0], times[2], times[3], times[4], times[6]])):
-        y = ry + 24 + k * 30
-        done = show(t_done + .6)
-        # pending: the label in full ink; done: a ticked box and the label struck through by the font
-        # itself, so the line always ends where the text does
-        n[0] += 1
-        pend = f"p{n[0]}"
-        css.append(f".{pend}{{animation:{pend} {loop}s infinite}}"
-                   f"@keyframes {pend}{{0%,{pct(t_done + .6)}%{{opacity:1}}{pct(t_done + .85)}%,{pct(loop * .96)}%{{opacity:0}}"
-                   f"{pct(loop * .96 + .25)}%,100%{{opacity:1}}}}")
-        body.append(f'<rect x="{rx}" y="{y-11}" width="13" height="13" rx="3" stroke="{MUTED}"/>'
-                    f'<text class="{pend}" x="{rx+22}" y="{y}" font-size="13" fill="{TEXT}">{esc(label)}</text>'
-                    f'<g class="{done}"><rect x="{rx}" y="{y-11}" width="13" height="13" rx="3" fill="{GREEN}"/>'
-                    f'<path d="M{rx+3} {y-4.5} l3 3 l5 -6" stroke="{PANEL}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
-                    f'<text x="{rx+22}" y="{y}" font-size="13" fill="{MUTED}" text-decoration="line-through">{esc(label)}</text></g>')
-
-    # the number the session was chasing: frames where the pet went missing
-    by = ry + 196
-    body.append(f'<rect x="{rx-16}" y="{by}" width="{w-40-rx+16}" height="118" rx="12" fill="{PANEL}" stroke="{LINE}"/>'
-                f'<text x="{rx}" y="{by+26}" class="m" font-size="11" letter-spacing="3" fill="{MUTED}">FRAMES MISSING IN CAPTURE</text>'
-                f'<text x="{rx}" y="{by+78}" font-size="44" font-weight="800" fill="{AMBER}" class="{show(times[0] + .4, times[3] + .6)}">7<tspan font-size="20" fill="{MUTED}"> / 104</tspan></text>'
-                f'<text x="{rx}" y="{by+78}" font-size="44" font-weight="800" fill="{GREEN}" class="{show(times[3] + .6)}">0<tspan font-size="20" fill="{MUTED}"> / 199</tspan></text>'
-                f'<text x="{rx}" y="{by+102}" class="m" font-size="11" fill="{MUTED}">sampled every ~100 ms, like a screen recorder</text>')
-
-    body.append(f'<path class="flow" d="M40 {h-44} H{w-40}" stroke="url(#clay)" stroke-width="2"/>'
-                f'<text x="{w/2}" y="{h-18}" text-anchor="middle" class="m" font-size="11.5" fill="{MUTED}">'
-                f'measure it, fix the cause, measure again · the loop I run Claude Code in, every day</text>')
-    write("claude.svg", svg(w, h, "".join(body), "".join(css), defs))
+    body.append(f'<circle cx="{cx}" cy="{cy}" r="46" fill="{INK}" stroke="{GOLD}"/>'
+                f'<circle cx="{cx}" cy="{cy}" r="46" stroke="{GOLD}" stroke-opacity=".4">'
+                f'<animate attributeName="r" values="46;58;46" dur="5s" repeatCount="indefinite"/>'
+                f'<animate attributeName="stroke-opacity" values=".4;0;.4" dur="5s" repeatCount="indefinite"/></circle>'
+                f'<text x="{cx}" y="{cy+7}" text-anchor="middle" class="s" font-size="21" fill="{GOLD}">Claude</text>')
+    for i, (lbl, col) in enumerate([("inner · AI core", GOLD_DIM), ("middle · apps & UI", RULE), ("outer · data & infra", RULE)]):
+        body.append(f'<rect x="56" y="{h-92+i*24}" width="9" height="9" fill="{INK}" stroke="{col if i else GOLD}"/>'
+                    f'<text x="74" y="{h-83.5+i*24}" class="m" font-size="11" letter-spacing="1.5" fill="{MUTED}">{esc(lbl.upper())}</text>')
+    write("stack.svg", svg(w, h, "".join(body)))
 
 
 def concept(today):
     name, idea, arxiv = AGENT_PATTERNS[today.toordinal() % len(AGENT_PATTERNS)]
-    w, h = 1000, 170
-    css = ".bar{animation:grow 3s ease-out infinite alternate}@keyframes grow{from{transform:scaleX(.15)}to{transform:scaleX(1)}}"
-    body = (panel(w, h)
-            + f'<text x="40" y="44" class="m" font-size="12" letter-spacing="3" fill="{AMBER}">◆ AGENT PATTERN OF THE DAY · {today:%d %b %Y}</text>'
-            + f'<text x="40" y="88" font-size="30" font-weight="800" fill="url(#brand)">{esc(name)}</text>'
-            + f'<text x="40" y="120" font-size="15" fill="{TEXT}">{esc(idea)}</text>'
-            + f'<rect x="40" y="138" width="200" height="3" rx="1.5" fill="url(#brand)" class="bar" style="transform-origin:40px 0"/>'
-            + f'<rect x="{w-170}" y="26" width="132" height="28" rx="14" fill="{AMBER}" fill-opacity=".1" stroke="{AMBER}" stroke-opacity=".5"/>'
-            + f'<text x="{w-104}" y="45" text-anchor="middle" class="m" font-size="12" fill="{AMBER}">arXiv:{arxiv}</text>')
-    write("concept.svg", svg(w, h, body, css, DOTS))
+    w, h = 1000, 190
+    body = (card(w, h) + label(56, 62, f"Pattern of the day · {today:%d %b %Y}", GOLD)
+            + f'<text x="56" y="114" class="s rise" font-size="36" fill="{TEXT}" style="animation-delay:.2s">{esc(name)}</text>'
+            + rule(56, 132, 300, GOLD, .6)
+            + f'<text x="56" y="160" class="rise" font-size="14.5" fill="{SOFT}" style="animation-delay:.4s">{esc(idea)}</text>'
+            + f'<text x="{w-56}" y="62" text-anchor="end" class="m fade" font-size="11" letter-spacing="2" fill="{MUTED}">ARXIV:{arxiv}</text>')
+    write("concept.svg", svg(w, h, body))
 
 
 def divider():
-    w, h = 1000, 30
-    body = (f'<defs><linearGradient id="fade" x1="0" x2="1"><stop offset="0" stop-color="{VIOLET}" stop-opacity="0"/>'
-            f'<stop offset=".5" stop-color="{CYAN}"/><stop offset="1" stop-color="{PINK}" stop-opacity="0"/></linearGradient></defs>'
-            f'<line x1="0" y1="15" x2="{w}" y2="15" stroke="url(#fade)" stroke-width="1.5"/>'
-            f'<circle r="4" cy="15" fill="{CYAN}" filter="url(#glow)"><animate attributeName="cx" values="60;940;60" dur="8s" repeatCount="indefinite"/></circle>')
+    w, h = 1000, 28
+    body = (f'<defs><linearGradient id="fade" x1="0" x2="1"><stop offset="0" stop-color="{RULE}" stop-opacity="0"/>'
+            f'<stop offset=".5" stop-color="{RULE}"/><stop offset="1" stop-color="{RULE}" stop-opacity="0"/></linearGradient></defs>'
+            f'<line x1="0" y1="14" x2="{w}" y2="14" stroke="url(#fade)"/>'
+            f'<rect x="{w/2-4}" y="10" width="8" height="8" fill="{GOLD}" transform="rotate(45 {w/2} 14)"/>'
+            f'<rect y="13.5" width="60" height="1" fill="{GOLD}" opacity=".7"><animate attributeName="x" values="-60;{w};-60" dur="14s" repeatCount="indefinite"/>'
+            f'<animate attributeName="opacity" values="0;.7;.7;0;0" keyTimes="0;.1;.4;.5;1" dur="14s" repeatCount="indefinite"/></rect>')
     write("divider.svg", svg(w, h, body))
 
 
 def footer(now):
-    w, h = 1000, 150
-    wave = "M0,110 " + " ".join(f"Q{x+25},{90 if (x // 50) % 2 == 0 else 130} {x+50},110" for x in range(0, 1050, 50))
-    css = (".wave{stroke-dasharray:12 10;animation:flow 3s linear infinite}@keyframes flow{to{stroke-dashoffset:-44}}"
-           ".cur{animation:blink 1s steps(1) infinite}@keyframes blink{50%{opacity:0}}")
-    body = (f'<path class="wave" d="{wave}" stroke="url(#brand)" stroke-width="2" opacity=".7"/>'
-            + f'<text x="{w/2}" y="46" text-anchor="middle" class="m" font-size="15" fill="{TEXT}">'
-              f'<tspan fill="{GREEN}">ruban@agent-os</tspan><tspan fill="{VIOLET}">:~$ </tspan>exit</text>'
-            + f'<text x="{w/2}" y="72" text-anchor="middle" class="m" font-size="12" fill="{MUTED}">'
-              f'session closed · thanks for stopping by · re-rendered {now:%Y-%m-%d %H:%M} UTC</text>'
-            + f'<rect class="cur" x="{w/2+52}" y="33" width="9" height="16" fill="{CYAN}"/>')
-    write("footer.svg", svg(w, h, body, css))
+    w, h = 1000, 170
+    body = (rule(300, 30, 700, RULE, 0)
+            + diamond(w / 2, 30, 9, GOLD, "breathe")
+            + f'<text x="{w/2}" y="88" text-anchor="middle" class="s rise" font-size="30" fill="{TEXT}" style="animation-delay:.2s">Thank you for visiting.</text>'
+            + f'<text x="{w/2}" y="122" text-anchor="middle" class="m fade" font-size="10.5" letter-spacing="2.6" fill="{DIM}" style="animation-delay:.5s">'
+              f'RE-RENDERED {now:%d %b %Y · %H:%M} UTC · GITHUB.COM/{USER.upper()}</text>')
+    write("footer.svg", svg(w, h, body))
+
+
+def tiles(values, y, w, h0=86):
+    """A row of figures: a big didone number over a mono label, hairlines between them."""
+    tw = (w - 112) / len(values)
+    out = []
+    for i, (val, lbl, gold) in enumerate(values):
+        x = 56 + i * tw
+        if i:
+            out.append(f'<line x1="{x:.0f}" y1="{y}" x2="{x:.0f}" y2="{y+h0}" stroke="{LINE}"/>')
+        out.append(f'<g class="rise" style="animation-delay:{.15 + i*.1:.2f}s">'
+                   f'<text x="{x + (0 if i == 0 else 24):.0f}" y="{y+46}" class="s" font-size="40" fill="{GOLD if gold else TEXT}">{esc(val)}</text>'
+                   f'<text x="{x + (0 if i == 0 else 24):.0f}" y="{y+72}" class="m" font-size="10.5" letter-spacing="2.4" fill="{MUTED}">{esc(lbl.upper())}</text></g>')
+    return "".join(out)
 
 
 # ── live data ────────────────────────────────────────────────────────────────
@@ -526,29 +368,29 @@ def streaks(days, today):
 
 
 def heatmap(days, total):
-    w, h, x0, y0, s = 1000, 250, 70, 70, 16
+    w, h, x0, y0, s = 1000, 260, 76, 92, 16
     start = days[0][0] - dt.timedelta(days=(days[0][0].weekday() + 1) % 7)
-    css = (".c{opacity:0;animation:pop 24s infinite;transform-box:fill-box;transform-origin:center}"
-           "@keyframes pop{0%{opacity:0;transform:scale(.2)}3%{opacity:1;transform:scale(1)}94%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.2)}}")
-    body = [panel(w, h),
-            f'<text x="40" y="42" class="m" font-size="12" letter-spacing="3" fill="{CYAN}">CONTRIBUTIONS · LAST 12 MONTHS</text>',
-            f'<text x="{w-40}" y="42" text-anchor="end" font-size="15" font-weight="700" fill="{TEXT}">{total:,} contributions</text>']
+    css = (f".c{{animation:pop .7s {EASE} both;transform-box:fill-box;transform-origin:center}}"
+           "@keyframes pop{from{opacity:0;transform:scale(.3)}}")
+    body = [card(w, h), label(56, 62, "Contributions · last 12 months", GOLD),
+            f'<text x="{w-56}" y="64" text-anchor="end" class="s fade" font-size="22" fill="{TEXT}">{total:,}'
+            f'<tspan class="m" font-size="10.5" letter-spacing="2.4" fill="{MUTED}">  CONTRIBUTIONS</tspan></text>']
     seen = set()
     for d, c, lvl in days:
         col, row = (d - start).days // 7, (d.weekday() + 1) % 7
         x, y = x0 + col * s, y0 + row * s
-        body.append(f'<rect class="c" x="{x}" y="{y}" width="12" height="12" rx="3" fill="{HEAT[min(lvl, 4)]}" '
-                    f'style="animation-delay:{col*45}ms"><title>{c} on {d:%d %b %Y}</title></rect>')
+        body.append(f'<rect class="c" x="{x}" y="{y}" width="12" height="12" rx="1.5" fill="{HEAT[min(lvl, 4)]}" '
+                    f'style="animation-delay:{col*18}ms"><title>{c} on {d:%d %b %Y}</title></rect>')
         if d.day <= 7 and row == 0 and (d.year, d.month) not in seen:
             seen.add((d.year, d.month))
-            body.append(f'<text x="{x}" y="{y0-10}" class="m" font-size="10.5" fill="{MUTED}">{d:%b}</text>')
+            body.append(f'<text x="{x}" y="{y0-12}" class="m" font-size="10" letter-spacing="1" fill="{MUTED}">{d:%b}</text>')
     for row, lbl in [(1, "Mon"), (3, "Wed"), (5, "Fri")]:
-        body.append(f'<text x="38" y="{y0+row*s+10}" class="m" font-size="10" fill="{MUTED}">{lbl}</text>')
-    lx = w - 40 - 5 * 16 - 70
-    body.append(f'<text x="{lx}" y="{h-22}" class="m" font-size="10.5" fill="{MUTED}">less</text>')
-    body += [f'<rect x="{lx+34+i*16}" y="{h-32}" width="12" height="12" rx="3" fill="{c}"/>' for i, c in enumerate(HEAT)]
-    body.append(f'<text x="{lx+34+5*16+4}" y="{h-22}" class="m" font-size="10.5" fill="{MUTED}">more</text>')
-    write("heatmap.svg", svg(w, h, "".join(body), css, DOTS))
+        body.append(f'<text x="40" y="{y0+row*s+10}" class="m" font-size="9.5" fill="{DIM}">{lbl}</text>')
+    lx = w - 56 - 5 * 16 - 64
+    body.append(f'<text x="{lx}" y="{h-30}" class="m" font-size="9.5" letter-spacing="1" fill="{DIM}">LESS</text>')
+    body += [f'<rect x="{lx+36+i*16}" y="{h-40}" width="12" height="12" rx="1.5" fill="{c}"/>' for i, c in enumerate(HEAT)]
+    body.append(f'<text x="{lx+36+5*16+6}" y="{h-30}" class="m" font-size="9.5" letter-spacing="1" fill="{DIM}">MORE</text>')
+    write("heatmap.svg", svg(w, h, "".join(body), css))
 
 
 def stats_card(days, total, today):
@@ -561,36 +403,62 @@ def stats_card(days, total, today):
     except Exception as e:  # noqa: BLE001 — the calendar half of the card is still worth drawing
         print(f"  repos fetch failed: {e}")
         repos = None
-    w, h = 1000, 260
-    tiles = [(f"{total:,}", "contributions / yr", VIOLET), (f"{cur} d", "current streak", CYAN),
-             (f"{longest} d", "longest streak", PINK), (f"{active}", "active days", GREEN),
-             (str(len(repos)) if repos is not None else "—", "public repos", AMBER)]
-    css = ".ring{animation:ring 2.4s ease-out both}@keyframes ring{from{stroke-dashoffset:126}}"
-    body = [panel(w, h), f'<text x="40" y="42" class="m" font-size="12" letter-spacing="3" fill="{PINK}">TELEMETRY</text>',
-            f'<text x="{w-40}" y="42" text-anchor="end" class="m" font-size="11" fill="{MUTED}">best day: {best_c} on {best_d:%d %b %Y}</text>']
-    tw = (w - 80) / len(tiles)
-    for i, (val, lbl, col) in enumerate(tiles):
-        x = 40 + i * tw
-        body.append(f'<rect x="{x+4:.0f}" y="62" width="{tw-8:.0f}" height="96" rx="14" fill="{col}" fill-opacity=".06" stroke="{col}" stroke-opacity=".35"/>'
-                    f'<circle cx="{x+34:.0f}" cy="110" r="20" stroke="{LINE}" stroke-width="4"/>'
-                    f'<circle class="ring" cx="{x+34:.0f}" cy="110" r="20" stroke="{col}" stroke-width="4" stroke-linecap="round" '
-                    f'stroke-dasharray="126" stroke-dashoffset="{126*(1-0.25-0.15*i):.0f}" transform="rotate(-90 {x+34:.0f} 110)" style="animation-delay:{i*.2}s"/>'
-                    f'<text x="{x+66:.0f}" y="112" font-size="25" font-weight="800" fill="{TEXT}">{esc(val)}</text>'
-                    f'<text x="{x+66:.0f}" y="134" class="m" font-size="11" fill="{MUTED}">{esc(lbl)}</text>')
+    w, h = 1000, 270
+    body = [card(w, h), label(56, 62, "Telemetry", GOLD),
+            label(w - 56, 62, f"best day: {best_c} on {best_d:%d %b %Y}", MUTED, "end"),
+            tiles([(f"{total:,}", "contributions / yr", True), (f"{cur}d", "current streak", False),
+                   (f"{longest}d", "longest streak", False), (f"{active}", "active days", False),
+                   (str(len(repos)) if repos is not None else "—", "public repos", False)], 88, w)]
     if repos:
         langs = Counter(r["language"] for r in repos if r.get("language")).most_common(6)
         n = sum(c for _, c in langs) or 1
-        palette = [VIOLET, CYAN, PINK, GREEN, AMBER, "#60A5FA"]
-        body.append(f'<text x="40" y="188" class="m" font-size="11" fill="{MUTED}">languages · by public repo count</text>')
-        x = 40.0
+        shades = [GOLD, TEXT, "#A8A49C", "#6E6B66", "#4A4845", "#33312F"]
+        body.append(label(56, 206, "languages · by public repo count", MUTED, size=10))
+        x = 56.0
         for i, (lang, c) in enumerate(langs):
-            seg = (w - 80) * c / n
-            body.append(f'<rect x="{x:.1f}" y="198" width="0" height="10" fill="{palette[i]}">'
-                        f'<animate attributeName="width" from="0" to="{max(seg-2, 2):.1f}" dur="1.2s" begin="{i*.15:.2f}s" fill="freeze"/></rect>'
-                        f'<circle cx="{40+i*150+5}" cy="231" r="4.5" fill="{palette[i]}"/>'
-                        f'<text x="{40+i*150+15}" y="235" class="m" font-size="11.5" fill="{TEXT}">{esc(lang)} <tspan fill="{MUTED}">{100*c/n:.0f}%</tspan></text>')
+            seg = (w - 112) * c / n
+            body.append(f'<rect class="draw" x="{x:.1f}" y="216" width="{max(seg-2, 2):.1f}" height="3" fill="{shades[i]}" style="animation-delay:{.3 + i*.12:.2f}s"/>'
+                        f'<rect x="{56+i*150}" y="236" width="7" height="7" fill="{shades[i]}" transform="rotate(45 {59.5+i*150} 239.5)"/>'
+                        f'<text x="{70+i*150}" y="243" class="m" font-size="11" fill="{SOFT}">{esc(lang)} <tspan fill="{MUTED}">{100*c/n:.0f}%</tspan></text>')
             x += seg
-    write("stats.svg", svg(w, h, "".join(body), css, DOTS))
+    write("stats.svg", svg(w, h, "".join(body)))
+
+
+def shiplog(tiles_, releases):
+    w, h = 1000, 420
+    css = (f".bar{{animation:grow 1.4s {EASE} both;transform-box:fill-box;transform-origin:50% 100%}}"
+           "@keyframes grow{from{transform:scaleY(0)}}")
+    body = [card(w, h), label(56, 62, "AURA · ship log", GOLD),
+            label(w - 56, 62, "from AURA's public README + CHANGELOG, every 6h", MUTED, "end"),
+            tiles([(v, l, i == 0) for i, (v, l) in enumerate(tiles_)], 84, w)]
+    base, top = 340, 210
+    peak = max(r["tests"] or 0 for r in releases) or 1
+    slot = (w - 112) / len(releases)
+    body.append(label(56, 196, "tests per release, as its changelog states · ~ approximate · — not stated", DIM, size=9.5)
+                + f'<line x1="56" y1="{base}" x2="{w-56}" y2="{base}" stroke="{RULE}"/>')
+    pts, under = [], len(body)
+    for i, r in enumerate(releases):
+        cx = 56 + slot * (i + .5)
+        latest = i == len(releases) - 1
+        if r["tests"]:
+            bh = (base - top) * r["tests"] / peak
+            pts.append(f"{cx:.1f},{base-bh:.1f}")
+            body.append(f'<rect class="bar" x="{cx-9:.1f}" y="{base-bh:.1f}" width="18" height="{bh:.1f}" fill="{GOLD if latest else "#3A3936"}" '
+                        f'style="animation-delay:{.2 + i*.06:.2f}s"/>'
+                        f'<text x="{cx:.1f}" y="{base-bh-9:.1f}" text-anchor="middle" class="m fade" font-size="10.5" fill="{GOLD if latest else SOFT}" '
+                        f'style="animation-delay:{.6 + i*.06:.2f}s">{"~" if r["approx"] else ""}{r["tests"]:,}</text>')
+        else:
+            body.append(f'<rect x="{cx-9:.1f}" y="{base-5}" width="18" height="5" stroke="{DIM}" stroke-dasharray="2 2"/>'
+                        f'<text x="{cx:.1f}" y="{base-13}" text-anchor="middle" class="m" font-size="10.5" fill="{DIM}">—</text>')
+        body.append(f'<text x="{cx:.1f}" y="{base+20}" text-anchor="middle" class="m" font-size="11" fill="{GOLD if latest else TEXT}">v{esc(r["v"])}</text>'
+                    f'<text x="{cx:.1f}" y="{base+35}" text-anchor="middle" class="m" font-size="9.5" fill="{DIM}">{r["date"]:%d %b}</text>')
+    if len(pts) > 1:
+        body.insert(under, f'<polyline points="{" ".join(pts)}" stroke="{MUTED}" stroke-opacity=".5" stroke-dasharray="2 4"/>')
+    first, last = releases[0], releases[-1]
+    days = (last["date"] - first["date"]).days
+    caption = f"{len(releases)} releases in {days} days · latest v{last['v']}" + (f" · {last['theme']}" if last["theme"] else "")
+    body.append(f'<text x="{w/2}" y="{h-26}" text-anchor="middle" class="m" font-size="10.5" letter-spacing="1.2" fill="{SOFT}">{esc(caption.upper())}</text>')
+    write("shiplog.svg", svg(w, h, "".join(body), css))
 
 
 def aura_receipts():
@@ -613,49 +481,6 @@ def aura_receipts():
     if len(releases) < 2:
         raise ValueError("fewer than two releases parsed from CHANGELOG.md")
     return tiles, releases[::-1]
-
-
-def shiplog(tiles, releases):
-    w, h = 1000, 400
-    css = (".bar{animation:rise 1.4s cubic-bezier(.2,.8,.2,1) both;transform-box:fill-box;transform-origin:50% 100%}"
-           "@keyframes rise{from{transform:scaleY(0)}}")
-    defs = DOTS + (f'<linearGradient id="barG" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="{VIOLET}"/>'
-                   f'<stop offset="1" stop-color="{CYAN}"/></linearGradient>')
-    body = [panel(w, h), f'<text x="40" y="42" class="m" font-size="12" letter-spacing="3" fill="{AMBER}">AURA · SHIP LOG</text>',
-            f'<text x="{w-40}" y="42" text-anchor="end" class="m" font-size="11" fill="{MUTED}">read from AURA&apos;s public README + CHANGELOG every 6h</text>']
-    tw = (w - 80) / len(tiles)
-    for i, ((val, lbl), col) in enumerate(zip(tiles, [VIOLET, CYAN, PINK, GREEN])):
-        x = 40 + i * tw
-        body.append(f'<rect x="{x+4:.0f}" y="60" width="{tw-8:.0f}" height="74" rx="14" fill="{col}" fill-opacity=".06" stroke="{col}" stroke-opacity=".35"/>'
-                    f'<text x="{x+24:.0f}" y="98" font-size="26" font-weight="800" fill="{TEXT}">{esc(val)}</text>'
-                    f'<text x="{x+24:.0f}" y="120" class="m" font-size="11" fill="{col}">{esc(lbl)}</text>')
-    base, top = 330, 190
-    peak = max(r["tests"] or 0 for r in releases) or 1
-    slot = (w - 80) / len(releases)
-    body.append(f'<text x="40" y="168" class="m" font-size="11" fill="{MUTED}">tests per release, as stated in its changelog entry · ~ = approximate · — = not stated</text>'
-                f'<line x1="40" y1="{base}" x2="{w-40}" y2="{base}" stroke="{LINE}"/>')
-    pts, under = [], len(body)  # trend line goes under the bars
-    for i, r in enumerate(releases):
-        cx = 40 + slot * (i + .5)
-        if r["tests"]:
-            bh = (base - top) * r["tests"] / peak
-            pts.append(f"{cx:.1f},{base-bh:.1f}")
-            body.append(f'<rect class="bar" x="{cx-13:.1f}" y="{base-bh:.1f}" width="26" height="{bh:.1f}" rx="4" fill="url(#barG)" '
-                        f'style="animation-delay:{i*.08:.2f}s"/>'
-                        f'<text x="{cx:.1f}" y="{base-bh-8:.1f}" text-anchor="middle" class="m" font-size="11" fill="{TEXT}">'
-                        f'{"~" if r["approx"] else ""}{r["tests"]:,}</text>')
-        else:
-            body.append(f'<rect x="{cx-13:.1f}" y="{base-6}" width="26" height="6" rx="2" stroke="{MUTED}" stroke-dasharray="2 2"/>'
-                        f'<text x="{cx:.1f}" y="{base-14}" text-anchor="middle" class="m" font-size="11" fill="{MUTED}">—</text>')
-        body.append(f'<text x="{cx:.1f}" y="{base+18}" text-anchor="middle" class="m" font-size="11.5" font-weight="600" fill="{CYAN}">v{esc(r["v"])}</text>'
-                    f'<text x="{cx:.1f}" y="{base+33}" text-anchor="middle" class="m" font-size="10" fill="{MUTED}">{r["date"]:%d %b}</text>')
-    if len(pts) > 1:
-        body.insert(under, f'<polyline points="{" ".join(pts)}" stroke="{PINK}" stroke-opacity=".55" stroke-dasharray="3 4"/>')
-    first, last = releases[0], releases[-1]
-    days = (last["date"] - first["date"]).days
-    caption = f"{len(releases)} releases in {days} days · latest v{last['v']}" + (f" · {last['theme']}" if last["theme"] else "")
-    body.append(f'<text x="{w/2}" y="{h-14}" text-anchor="middle" class="m" font-size="11.5" fill="{TEXT}">{esc(caption)}</text>')
-    write("shiplog.svg", svg(w, h, "".join(body), css, defs))
 
 
 def activity():
@@ -696,7 +521,7 @@ def splice(text, key, content):
 def main():
     now = dt.datetime.now(dt.timezone.utc)
     today = now.date()
-    for f in (hero, boot, claude_motion, swarm, stack, builds, divider):
+    for f in (hero, about, builds, swarm, stack, divider):
         f()
     concept(today)
     footer(now)
