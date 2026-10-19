@@ -91,12 +91,12 @@
 <h3>06 &nbsp;·&nbsp; Recently</h3>
 
 <!--ACTIVITY:START-->
+- `2026-10-19` ⚡ pushed to [RubanSivanandam](https://github.com/RubanSivanandam/RubanSivanandam)
 - `2026-10-16` ⭐ starred [rea](https://github.com/morluto/rea)
 - `2026-10-12` ⚡ pushed to [RubanSivanandam](https://github.com/RubanSivanandam/RubanSivanandam)
 - `2026-10-07` ⚡ pushed to [RubanSivanandam](https://github.com/RubanSivanandam/RubanSivanandam)
 - `2026-10-07` 🌱 created branch `main` in [RubanSivanandam](https://github.com/RubanSivanandam/RubanSivanandam)
 - `2026-09-28` ⭐ starred [awesome-claude-code](https://github.com/hesreallyhim/awesome-claude-code)
-- `2026-09-28` ⭐ starred [claude-code-best-practice](https://github.com/shanraisshan/claude-code-best-practice)
 <!--ACTIVITY:END-->
 
 <details>
