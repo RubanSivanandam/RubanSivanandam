@@ -91,7 +91,7 @@
 <h3>06 &nbsp;·&nbsp; Recently</h3>
 
 <!--ACTIVITY:START-->
-- `2026-10-19` ⚡ pushed to [RubanSivanandam](https://github.com/RubanSivanandam/RubanSivanandam)
+- _quiet on the public side — most of the work lives in private repos_
 <!--ACTIVITY:END-->
 
 <details>
